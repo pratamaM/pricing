@@ -17,6 +17,28 @@ function renderHistoryDetailFixCost(params) {
     `;
 }
 
+// Jawaban pertanyaan biaya tambahan (multipickup, multidrop, kawalan, TKBM) + rincian nominal
+function fcExtraBlock(d) {
+    const payer = (v) => v === 'customer' ? 'Customer' : v === 'perusahaan' ? 'Perusahaan' : null;
+    const rows = [
+        ['Multi Pickup', Number(d.multipickup_points) > 0 ? `Ya (${Number(d.multipickup_points)} titik tambahan)` : 'Tidak'],
+        ['Multi Drop', Number(d.multidrop_points) > 0 ? `Ya (${Number(d.multidrop_points)} titik tambahan)` : 'Tidak'],
+        ['Perlu Kawalan', Number(d.kawalan) ? 'Ya' : 'Tidak']
+    ];
+    if (payer(d.tkbm_dtp)) rows.push(['TKBM Door to Port ditanggung', payer(d.tkbm_dtp)]);
+    if (payer(d.tkbm_ptd)) rows.push(['TKBM Port to Door ditanggung', payer(d.tkbm_ptd)]);
+    let lines = [];
+    try { lines = JSON.parse(d.additional_detail || '[]'); } catch (e) { lines = []; }
+    return `
+    <div class="bg-gray-50 rounded-lg p-4 border border-gray-100 mb-6">
+        <h4 class="font-semibold text-gray-800 mb-3">Biaya Tambahan</h4>
+        <div class="space-y-1 text-sm">
+            ${rows.map(([l, v]) => `<div class="flex justify-between"><span class="text-gray-600">${App.esc(l)}</span><span class="font-medium">${App.esc(v)}</span></div>`).join('')}
+            ${lines.map(l => `<div class="flex justify-between text-xs text-gray-500"><span>${App.esc(l.name)}${l.qty > 1 ? ' x' + Number(l.qty) : ''}</span><span>${App.formatRp(l.subtotal)}</span></div>`).join('')}
+        </div>
+    </div>`;
+}
+
 // Satu langkah di Approval Trail. a = baris approval (atau undefined), waiting = sedang menunggu tingkat ini
 function fcTrailStep(label, a, waiting) {
     const approved = a && a.action === 'approve';
@@ -115,6 +137,22 @@ async function renderHistoryDetailFixCostInit(params) {
                         </div>
                     </div>
                     
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                        ${[
+                            ['Layanan', serviceLabel(data.service_type || (data.transport_type === 'land' ? 'door_to_door' : null))],
+                            ['Gudang Muat', data.gudang_muat || '-'],
+                            ['Gudang Bongkar', data.gudang_bongkar || '-'],
+                            ['Jumlah Truk', data.truck_count || 1],
+                            ['Durasi Takedown', (Number(data.takedown_duration) || 0) + ' hari']
+                        ].map(([l, v]) => `
+                        <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                            <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">${l}</p>
+                            <p class="font-semibold text-gray-800">${App.esc(v)}</p>
+                        </div>`).join('')}
+                    </div>
+
+                    ${fcExtraBlock(data)}
+
                     <div class="bg-blue-50 rounded-lg p-5 border border-blue-100">
                         <h4 class="font-semibold text-gray-800 mb-4">Cost Detail</h4>
                         <div class="space-y-3">
@@ -134,6 +172,15 @@ async function renderHistoryDetailFixCostInit(params) {
                                 <span class="font-bold text-gray-800">Fix Cost</span>
                                 <span class="font-bold text-xl text-blue-700">${App.formatRp(data.fix_cost)}</span>
                             </div>
+                            ${data.total_cost !== null && data.total_cost !== undefined ? `
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600">Biaya tambahan per truk</span>
+                                <span class="font-medium">${App.formatRp(data.additional_cost)}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="font-bold text-gray-800">Total (${Number(data.truck_count) || 1} truk)</span>
+                                <span class="font-bold text-lg text-blue-700">${App.formatRp(data.total_cost)}</span>
+                            </div>` : ''}
                         </div>
                     </div>
                     

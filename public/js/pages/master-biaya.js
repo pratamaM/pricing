@@ -141,6 +141,8 @@ async function loadMasterBiayaData() {
         thead.innerHTML = `
             <th class="px-4 py-3 font-medium">Origin</th>
             <th class="px-4 py-3 font-medium">Destination</th>
+            <th class="px-4 py-3 font-medium">Gudang Muat</th>
+            <th class="px-4 py-3 font-medium">Gudang Bongkar</th>
             <th class="px-4 py-3 font-medium">KM</th>
             <th class="px-4 py-3 font-medium">Type Mobil</th>
             <th class="px-4 py-3 font-medium">Total Cost</th>
@@ -150,6 +152,9 @@ async function loadMasterBiayaData() {
         thead.innerHTML = `
             <th class="px-4 py-3 font-medium">Origin</th>
             <th class="px-4 py-3 font-medium">Destination</th>
+            <th class="px-4 py-3 font-medium">Layanan</th>
+            <th class="px-4 py-3 font-medium">Gudang Muat</th>
+            <th class="px-4 py-3 font-medium">Gudang Bongkar</th>
             <th class="px-4 py-3 font-medium">Truck Type</th>
             <th class="px-4 py-3 font-medium">Temas Total</th>
             <th class="px-4 py-3 font-medium">Meratus Total</th>
@@ -157,7 +162,7 @@ async function loadMasterBiayaData() {
         `;
     }
     
-    tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center"><div class="spinner mx-auto border-gray-400"></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="p-8 text-center"><div class="spinner mx-auto border-gray-400"></div></td></tr>`;
     
     try {
         const res = await App.api(`/master-biaya/list?type=${currentMasterBiayaType}&search=${encodeURIComponent(currentMasterBiayaSearch)}&page=${currentMasterBiayaPage}&limit=20`);
@@ -168,7 +173,7 @@ async function loadMasterBiayaData() {
         document.getElementById('btn-next').disabled = currentMasterBiayaPage >= Math.ceil(res.total/20);
         
         if (res.data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-gray-500"><i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> No data found</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="9" class="p-8 text-center text-gray-500"><i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> No data found</td></tr>`;
             lucide.createIcons();
             return;
         }
@@ -182,6 +187,8 @@ async function loadMasterBiayaData() {
                 <tr class="hover:bg-gray-50">
                     <td class="px-4 py-3">${App.esc(origin || '-')}</td>
                     <td class="px-4 py-3">${App.esc(dest || '-')}</td>
+                    <td class="px-4 py-3">${App.esc(item.gudang_muat || '-')}</td>
+                    <td class="px-4 py-3">${App.esc(item.gudang_bongkar || '-')}</td>
                     <td class="px-4 py-3">${App.esc(item.km || '-')}</td>
                     <td class="px-4 py-3">${App.esc(item.type_mobil || '-')}</td>
                     <td class="px-4 py-3 font-medium">${App.formatRp(item.total)}</td>
@@ -195,6 +202,9 @@ async function loadMasterBiayaData() {
                 <tr class="hover:bg-gray-50">
                     <td class="px-4 py-3">${App.esc(origin || '-')}</td>
                     <td class="px-4 py-3">${App.esc(dest || '-')}</td>
+                    <td class="px-4 py-3">${App.esc(serviceLabel(item.service_type))}</td>
+                    <td class="px-4 py-3">${App.esc(item.gudang_muat || '-')}</td>
+                    <td class="px-4 py-3">${App.esc(item.gudang_bongkar || '-')}</td>
                     <td class="px-4 py-3">${App.esc(item.truck_type || '-')}</td>
                     <td class="px-4 py-3 font-medium">${App.formatRp(item.temas_total_cost_pph)}</td>
                     <td class="px-4 py-3 font-medium">${App.formatRp(item.meratus_total_cost_pph)}</td>
@@ -208,6 +218,6 @@ async function loadMasterBiayaData() {
         lucide.createIcons();
         
     } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-red-500">Failed to load data</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" class="p-8 text-center text-red-500">Failed to load data</td></tr>`;
     }
 }

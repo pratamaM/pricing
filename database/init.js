@@ -151,6 +151,63 @@ async function initDb() {
     ensureColumn('fix_cost_requests', 'container_type', 'TEXT');
     ensureColumn('fix_cost_requests', 'tonnage', 'REAL');
 
+    // Master Biaya: jenis layanan (Land = door_to_door; Sea = door_to_port / port_to_port / port_to_door) + gudang muat/bongkar
+    const hadSeaService = db.exec('PRAGMA table_info(master_biaya_sea)')[0].values.some(v => v[1] === 'service_type');
+    ensureColumn('master_biaya_land', 'service_type', "TEXT DEFAULT 'door_to_door'");
+    ensureColumn('master_biaya_land', 'gudang_muat', 'TEXT');
+    ensureColumn('master_biaya_land', 'gudang_bongkar', 'TEXT');
+    ensureColumn('master_biaya_sea', 'service_type', "TEXT DEFAULT 'door_to_port'");
+    ensureColumn('master_biaya_sea', 'gudang_muat', 'TEXT');
+    ensureColumn('master_biaya_sea', 'gudang_bongkar', 'TEXT');
+    if (!hadSeaService) console.log("Catatan: baris Master Biaya Sea lama diberi service_type 'door_to_port'; koreksi lewat Master Biaya > Edit bila perlu.");
+
+    // Master Jasa (darat & laut) dan Master Kendaraan
+    db.run(`
+        CREATE TABLE IF NOT EXISTS master_jasa (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            category TEXT NOT NULL CHECK(category IN ('land', 'sea')),
+            code TEXT,
+            name TEXT NOT NULL,
+            amount REAL DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS master_kendaraan (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            category TEXT NOT NULL CHECK(category IN ('land', 'sea')),
+            name TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+    `);
+    if (db.exec('SELECT COUNT(*) FROM master_jasa')[0].values[0][0] === 0) {
+        // code = jasa tambahan yang ditanyakan saat kalkulasi; nominal diisi lewat Master Jasa
+        const jasa = [
+            ['land', 'multipickup', 'Multi Pickup (per titik tambahan)'], ['land', 'multidrop', 'Multi Drop (per titik tambahan)'], ['land', 'kawalan', 'Kawalan'],
+            ['sea', 'multipickup', 'Multi Pickup (per titik tambahan)'], ['sea', 'multidrop', 'Multi Drop (per titik tambahan)'], ['sea', 'kawalan', 'Kawalan'],
+            ['sea', 'tkbm_dtp', 'TKBM Door to Port'], ['sea', 'tkbm_ptd', 'TKBM Port to Door']
+        ];
+        for (const j of jasa) db.run('INSERT INTO master_jasa (category, code, name, amount) VALUES (?, ?, ?, 0)', j);
+    }
+    if (db.exec('SELECT COUNT(*) FROM master_kendaraan')[0].values[0][0] === 0) {
+        for (const k of [['land', '20 Feet'], ['land', '40 Feet'], ['land', 'Wingbox'], ['sea', '20 Feet'], ['sea', '40 Feet']]) {
+            db.run('INSERT INTO master_kendaraan (category, name) VALUES (?, ?)', k);
+        }
+    }
+
+    // Kalkulasi: layanan, gudang, jumlah truk, durasi takedown, pertanyaan biaya tambahan
+    ensureColumn('fix_cost_requests', 'service_type', 'TEXT');
+    ensureColumn('fix_cost_requests', 'gudang_muat', 'TEXT');
+    ensureColumn('fix_cost_requests', 'gudang_bongkar', 'TEXT');
+    ensureColumn('fix_cost_requests', 'truck_count', 'INTEGER DEFAULT 1');
+    ensureColumn('fix_cost_requests', 'takedown_duration', 'REAL DEFAULT 0');
+    ensureColumn('fix_cost_requests', 'multipickup_points', 'INTEGER DEFAULT 0');
+    ensureColumn('fix_cost_requests', 'multidrop_points', 'INTEGER DEFAULT 0');
+    ensureColumn('fix_cost_requests', 'kawalan', 'INTEGER DEFAULT 0');
+    ensureColumn('fix_cost_requests', 'tkbm_dtp', 'TEXT');
+    ensureColumn('fix_cost_requests', 'tkbm_ptd', 'TEXT');
+    ensureColumn('fix_cost_requests', 'additional_cost', 'REAL DEFAULT 0');
+    ensureColumn('fix_cost_requests', 'additional_detail', 'TEXT');
+    ensureColumn('fix_cost_requests', 'total_cost', 'REAL');
+
     const res = db.exec('SELECT COUNT(*) as count FROM users');
     let count = 0;
     if (res.length > 0 && res[0].values.length > 0) {

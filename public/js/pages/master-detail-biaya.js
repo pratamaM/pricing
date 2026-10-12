@@ -1,3 +1,14 @@
+// Jenis layanan (dipakai juga oleh halaman lain). Darat = Door to Door; Laut = 3 pilihan di bawah.
+const SERVICE_LABELS = {
+    door_to_door: 'Door to Door',
+    door_to_port: 'Door to Port',
+    port_to_port: 'Port to Port',
+    port_to_door: 'Port to Door'
+};
+function serviceLabel(code) {
+    return SERVICE_LABELS[code] || '-';
+}
+
 function renderMasterDetailBiaya(params) {
     return `
     <div class="space-y-6 max-w-4xl mx-auto">
@@ -49,6 +60,18 @@ async function loadMasterDetail(params) {
                         <p class="text-sm text-gray-500">Type Mobil</p>
                         <p class="font-medium">${mdEsc(data.type_mobil || '-')}</p>
                     </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Layanan</p>
+                        <p class="font-medium">${mdEsc(serviceLabel('door_to_door'))}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Gudang Muat</p>
+                        <p class="font-medium">${mdEsc(data.gudang_muat || '-')}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Gudang Bongkar</p>
+                        <p class="font-medium">${mdEsc(data.gudang_bongkar || '-')}</p>
+                    </div>
                 </div>
             `;
             
@@ -87,6 +110,18 @@ async function loadMasterDetail(params) {
                     <div class="col-span-2 sm:col-span-1">
                         <p class="text-sm text-gray-500">Destination</p>
                         <p class="font-medium">${mdLoc(data, 'destination')}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Layanan</p>
+                        <p class="font-medium">${mdEsc(serviceLabel(data.service_type))}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Gudang Muat</p>
+                        <p class="font-medium">${mdEsc(data.gudang_muat || '-')}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Gudang Bongkar</p>
+                        <p class="font-medium">${mdEsc(data.gudang_bongkar || '-')}</p>
                     </div>
                     <div>
                         <p class="text-sm text-gray-500">Truck Type</p>
@@ -203,11 +238,13 @@ const MD_LOC_FIELDS = [
 
 const MD_FIELDS = {
     land: [...MD_LOC_FIELDS,
+        ['gudang_muat', 'Gudang Muat', 'text'], ['gudang_bongkar', 'Gudang Bongkar', 'text'],
         ['km', 'KM', 'num'], ['type_mobil', 'Type Mobil', 'text'],
         ['uj_sopir', 'UJ Sopir', 'num'], ['tip_muat', 'Tip Muat', 'num'], ['tip_bongkar', 'Tip Bongkar', 'num'], ['tkbm', 'TKBM', 'num'],
         ['maint_fee', 'Maint Fee', 'num'], ['risk_claim_it', 'Risk Claim + IT', 'num'], ['marketing', 'Marketing', 'num'],
         ['cost_pph', 'Cost + PPH', 'num'], ['total', 'Total', 'num']],
     sea: [...MD_LOC_FIELDS,
+        ['service_type', 'Layanan', 'svc'], ['gudang_muat', 'Gudang Muat', 'text'], ['gudang_bongkar', 'Gudang Bongkar', 'text'],
         ['truck_type', 'Truck Type', 'text'], ['km_truck_origin', 'KM Truck Origin', 'num'],
         ['trucking_origin', 'Trucking Origin', 'num'], ['thc_origin_lolo', 'THC Origin + LOLO', 'num'], ['thc_dest', 'THC Dest', 'num'],
         ['agent', 'Agent', 'num'], ['tkbm', 'TKBM', 'num'], ['do_clean', 'DO + Clean', 'num'], ['risk_claim', 'Risk Claim', 'num'],
@@ -217,15 +254,26 @@ const MD_FIELDS = {
         ['submit_value', 'Submit Value', 'num']]
 };
 
-function mdShowEditForm(params, data) {
+async function mdShowEditForm(params, data) {
     const fields = MD_FIELDS[params.type];
-    const inputs = fields.map(([name, label, kind]) => `
+    // Saran type kendaraan dari Master Kendaraan (tetap boleh diketik bebas)
+    let vehicles = [];
+    try { vehicles = await App.api(`/master-kendaraan?category=${params.type}`); } catch (e) { /* daftar saran saja */ }
+    const inputs = fields.map(([name, label, kind]) => {
+        const cls = 'mt-1 w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none';
+        if (kind === 'svc') {
+            const opts = ['door_to_port', 'port_to_port', 'port_to_door'].map(v => `<option value="${v}" ${data[name] === v ? 'selected' : ''}>${SERVICE_LABELS[v]}</option>`).join('');
+            return `<label class="block"><span class="text-sm text-gray-600">${label}</span><select id="ef-${name}" class="${cls}">${opts}</select></label>`;
+        }
+        const isVehicle = name === 'type_mobil' || name === 'truck_type';
+        return `
         <label class="block">
             <span class="text-sm text-gray-600">${label}</span>
-            <input id="ef-${name}" type="${kind === 'num' ? 'number' : 'text'}" ${kind === 'num' ? 'min="0" step="any"' : ''}
+            <input id="ef-${name}" type="${kind === 'num' ? 'number' : 'text'}" ${kind === 'num' ? 'min="0" step="any"' : ''} ${isVehicle ? 'list="ef-vehicle-list"' : ''}
                 value="${mdEsc(data[name])}"
-                class="mt-1 w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
-        </label>`).join('');
+                class="${cls}">
+        </label>`;
+    }).join('') + `<datalist id="ef-vehicle-list">${vehicles.map(v => `<option value="${mdEsc(v.name)}">`).join('')}</datalist>`;
 
     document.getElementById('detail-content').innerHTML = `
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">

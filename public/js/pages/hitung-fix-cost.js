@@ -22,6 +22,17 @@ function renderHitungFixCost() {
                 </label>
             </div>
 
+            <!-- Jenis layanan: darat = Door to Door (tetap); laut = pilih -->
+            <div class="mb-6 max-w-xs">
+                <label class="block text-sm text-gray-500 mb-1">Jenis Layanan</label>
+                <p id="svc-land" class="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-800">Door to Door</p>
+                <select id="hfc-service" class="hidden w-full border-gray-300 rounded-lg p-2.5 border focus:ring-2 focus:ring-blue-500 outline-none">
+                    <option value="door_to_port">Door to Port</option>
+                    <option value="port_to_port">Port to Port</option>
+                    <option value="port_to_door">Port to Door</option>
+                </select>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <!-- Origin -->
                 <div class="space-y-4">
@@ -69,8 +80,17 @@ function renderHitungFixCost() {
         <div id="cost-panel" class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hidden">
             <h3 class="text-lg font-semibold text-gray-800 mb-6 border-b pb-4">Kalkulasi Fix Cost</h3>
             
-            <!-- Detail pengiriman (diisi manual) -->
+            <!-- Detail pengiriman (gudang dari Master Biaya; sisanya diisi manual) -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 pb-6 border-b border-gray-100">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Gudang Muat</label>
+                    <p id="gudang-muat" class="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-800">-</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Gudang Bongkar</label>
+                    <p id="gudang-bongkar" class="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-800">-</p>
+                </div>
+                <div class="hidden md:block"></div>
                 <div id="tariff-wrap" class="hidden">
                     <label id="tariff-label" class="block text-sm font-medium text-gray-700 mb-1">Type Truck</label>
                     <select id="tariff-select" class="w-full border-gray-300 rounded-lg p-2.5 border focus:ring-2 focus:ring-blue-500 outline-none"></select>
@@ -82,8 +102,46 @@ function renderHitungFixCost() {
                     <datalist id="container-list"><option value="20ft"><option value="40ft"><option value="40HC"></datalist>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Tonase (ton) <span class="text-red-500">*</span></label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Berat / Tonase (ton) <span id="ton-req" class="text-red-500">*</span></label>
                     <input type="number" id="tonnage" min="0" step="any" class="w-full border-gray-300 rounded-lg p-2.5 border focus:ring-2 focus:ring-blue-500 outline-none" placeholder="mis. 8.5">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Jumlah Truk <span class="text-red-500">*</span></label>
+                    <input type="number" id="truck-count" min="1" step="1" value="1" class="w-full border-gray-300 rounded-lg p-2.5 border focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Durasi Takedown (hari)</label>
+                    <input type="number" id="takedown" min="0" step="any" value="0" class="w-full border-gray-300 rounded-lg p-2.5 border focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+
+                <!-- Pertanyaan biaya tambahan -->
+                <div class="md:col-span-3 mt-2 pt-4 border-t border-gray-100">
+                    <h4 class="font-medium text-gray-800 mb-3">Biaya Tambahan</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                        <div>
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="q-multipickup" class="w-4 h-4 text-blue-600"> <span class="text-sm font-medium text-gray-700">Multi Pickup?</span></label>
+                            <div id="q-multipickup-n" class="hidden mt-2"><input type="number" id="q-multipickup-points" min="1" step="1" value="1" class="w-40 border-gray-300 rounded-lg p-2 border text-sm focus:ring-2 focus:ring-blue-500 outline-none"> <span class="text-xs text-gray-500">titik tambahan</span></div>
+                        </div>
+                        <div>
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="q-multidrop" class="w-4 h-4 text-blue-600"> <span class="text-sm font-medium text-gray-700">Multi Drop?</span></label>
+                            <div id="q-multidrop-n" class="hidden mt-2"><input type="number" id="q-multidrop-points" min="1" step="1" value="1" class="w-40 border-gray-300 rounded-lg p-2 border text-sm focus:ring-2 focus:ring-blue-500 outline-none"> <span class="text-xs text-gray-500">titik tambahan</span></div>
+                        </div>
+                        <div>
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="q-kawalan" class="w-4 h-4 text-blue-600"> <span class="text-sm font-medium text-gray-700">Perlu kawalan?</span></label>
+                        </div>
+                        <div id="q-tkbm-dtp" class="hidden">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">TKBM Door to Port ditanggung siapa? <span class="text-red-500">*</span></label>
+                            <select id="q-tkbm-dtp-who" class="w-full border-gray-300 rounded-lg p-2 border text-sm focus:ring-2 focus:ring-blue-500 outline-none"><option value="">Pilih...</option><option value="customer">Customer</option><option value="perusahaan">Perusahaan</option></select>
+                        </div>
+                        <div id="q-tkbm-ptd" class="hidden">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">TKBM Port to Door ditanggung siapa? <span class="text-red-500">*</span></label>
+                            <select id="q-tkbm-ptd-who" class="w-full border-gray-300 rounded-lg p-2 border text-sm focus:ring-2 focus:ring-blue-500 outline-none"><option value="">Pilih...</option><option value="customer">Customer</option><option value="perusahaan">Perusahaan</option></select>
+                        </div>
+                    </div>
+                    <div id="q-extra" class="hidden mt-4">
+                        <p class="text-sm font-medium text-gray-700 mb-2">Jasa lainnya (opsional)</p>
+                        <div id="q-extra-list" class="space-y-2"></div>
+                    </div>
                 </div>
             </div>
             
@@ -118,6 +176,14 @@ function renderHitungFixCost() {
                         <p class="text-sm font-medium text-blue-600 mb-2">Calculated Fix Cost</p>
                         <p id="calc-fix-cost" class="text-4xl font-bold text-blue-700 text-center">Rp 0</p>
                     </div>
+
+                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 text-sm space-y-1">
+                        <div class="flex justify-between"><span class="text-gray-600">Fix Cost per truk</span><span id="sum-fix">Rp 0</span></div>
+                        <div class="flex justify-between"><span class="text-gray-600">Biaya tambahan per truk</span><span id="sum-add">Rp 0</span></div>
+                        <div class="flex justify-between"><span class="text-gray-600">Jumlah truk</span><span id="sum-trucks">1</span></div>
+                        <div class="flex justify-between pt-2 border-t border-gray-200 font-semibold text-gray-800"><span>Total Biaya</span><span id="sum-total">Rp 0</span></div>
+                        <div id="sum-detail" class="text-xs text-gray-500 pt-1"></div>
+                    </div>
                     
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
@@ -145,11 +211,38 @@ async function renderHitungFixCostInit() {
     
     document.querySelectorAll('input[name="hfc_type"]').forEach(el => {
         el.addEventListener('change', () => {
+            hfcApplyTypeUi();
             loadLocations(el.value);
             document.getElementById('cost-panel').classList.add('hidden');
         });
     });
-    
+    document.getElementById('hfc-service').addEventListener('change', () => {
+        loadLocations('sea');
+        document.getElementById('cost-panel').classList.add('hidden');
+    });
+
+    // Pertanyaan biaya tambahan -> hitung ulang ringkasan
+    for (const [chk, box] of [['q-multipickup', 'q-multipickup-n'], ['q-multidrop', 'q-multidrop-n']]) {
+        document.getElementById(chk).addEventListener('change', (e) => {
+            document.getElementById(box).classList.toggle('hidden', !e.target.checked);
+            hfcUpdateSummary();
+        });
+    }
+    ['q-multipickup-points', 'q-multidrop-points', 'q-kawalan', 'q-tkbm-dtp-who', 'q-tkbm-ptd-who', 'truck-count'].forEach(id => {
+        const el = document.getElementById(id);
+        el.addEventListener('input', hfcUpdateSummary);
+        el.addEventListener('change', hfcUpdateSummary);
+    });
+
+    // Master Jasa & Master Kendaraan (untuk biaya tambahan dan saran type container)
+    try {
+        hfcJasa = await App.api('/master-jasa');
+        const veh = await App.api('/master-kendaraan?category=sea');
+        document.getElementById('container-list').innerHTML = veh.map(v => `<option value="${App.esc(v.name)}">`).join('');
+    } catch (e) {
+        App.showToast('Gagal memuat Master Jasa / Kendaraan', 'warning');
+    }
+
     // Setup cascading
     setupCascading('orig');
     setupCascading('dest');
@@ -174,7 +267,90 @@ async function renderHitungFixCostInit() {
     document.getElementById('btn-submit-fix-cost').addEventListener('click', submitFixCost);
     
     // Initial load
+    hfcApplyTypeUi();
     loadLocations('land');
+}
+
+let hfcJasa = [];
+
+function hfcType() {
+    return document.querySelector('input[name="hfc_type"]:checked').value;
+}
+
+// Darat = Door to Door (tetap); laut = pilihan Door to Port / Port to Port / Port to Door
+function hfcService() {
+    return hfcType() === 'land' ? 'door_to_door' : document.getElementById('hfc-service').value;
+}
+
+function hfcApplyTypeUi() {
+    const sea = hfcType() === 'sea';
+    document.getElementById('svc-land').classList.toggle('hidden', sea);
+    document.getElementById('hfc-service').classList.toggle('hidden', !sea);
+}
+
+// Pertanyaan yang tampil mengikuti jenis layanan; nominal berasal dari Master Jasa
+function hfcRefreshQuestions() {
+    const type = hfcType(), svc = hfcService();
+    document.getElementById('q-tkbm-dtp').classList.toggle('hidden', !(type === 'sea' && svc === 'door_to_port'));
+    document.getElementById('q-tkbm-ptd').classList.toggle('hidden', !(type === 'sea' && svc === 'port_to_door'));
+    document.getElementById('ton-req').classList.toggle('hidden', type !== 'land'); // berat wajib untuk darat
+
+    for (const id of ['q-multipickup', 'q-multidrop', 'q-kawalan']) document.getElementById(id).checked = false;
+    for (const id of ['q-multipickup-n', 'q-multidrop-n']) document.getElementById(id).classList.add('hidden');
+    document.getElementById('q-multipickup-points').value = 1;
+    document.getElementById('q-multidrop-points').value = 1;
+    document.getElementById('q-tkbm-dtp-who').value = '';
+    document.getElementById('q-tkbm-ptd-who').value = '';
+    document.getElementById('truck-count').value = 1;
+    document.getElementById('takedown').value = 0;
+
+    const extras = hfcJasa.filter(j => j.category === type && !j.code);
+    document.getElementById('q-extra').classList.toggle('hidden', extras.length === 0);
+    document.getElementById('q-extra-list').innerHTML = extras.map(j => `
+        <label class="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
+            <input type="checkbox" class="q-extra-chk w-4 h-4 text-blue-600" value="${Number(j.id)}">
+            <span>${App.esc(j.name)} - ${App.esc(App.formatRp(j.amount))}</span>
+        </label>`).join('');
+    document.querySelectorAll('.q-extra-chk').forEach(el => el.addEventListener('change', hfcUpdateSummary));
+}
+
+// Hitung biaya tambahan per truk dari jawaban + Master Jasa (server menghitung ulang saat disimpan)
+function hfcAdditional() {
+    const type = hfcType();
+    const byCode = Object.fromEntries(hfcJasa.filter(j => j.category === type && j.code).map(j => [j.code, j]));
+    const lines = [];
+    const add = (j, qty, label) => { if (j && qty > 0) lines.push({ name: label || j.name, subtotal: (Number(j.amount) || 0) * qty }); };
+    const pts = (id) => Math.max(0, parseInt(document.getElementById(id).value, 10) || 0);
+    if (document.getElementById('q-multipickup').checked) add(byCode.multipickup, pts('q-multipickup-points'));
+    if (document.getElementById('q-multidrop').checked) add(byCode.multidrop, pts('q-multidrop-points'));
+    if (document.getElementById('q-kawalan').checked) add(byCode.kawalan, 1);
+    if (type === 'sea') {
+        if (document.getElementById('q-tkbm-dtp-who').value === 'perusahaan') add(byCode.tkbm_dtp, 1);
+        if (document.getElementById('q-tkbm-ptd-who').value === 'perusahaan') add(byCode.tkbm_ptd, 1);
+    }
+    const checked = [...document.querySelectorAll('.q-extra-chk:checked')].map(e => Number(e.value));
+    for (const j of hfcJasa.filter(j => j.category === type && !j.code && checked.includes(j.id))) add(j, 1);
+    return { lines, total: lines.reduce((s, l) => s + l.subtotal, 0) };
+}
+
+function hfcCurrentFix() {
+    let fix = hfcOriginalCost;
+    const p = parseFloat(document.getElementById('disc-percent').value);
+    const r = parseFloat(document.getElementById('disc-rp').value);
+    if (!isNaN(p) && p > 0) fix = hfcOriginalCost - (hfcOriginalCost * (p / 100));
+    else if (!isNaN(r) && r > 0) fix = hfcOriginalCost - r;
+    return Math.max(0, fix);
+}
+
+function hfcUpdateSummary() {
+    const trucks = Math.max(1, parseInt(document.getElementById('truck-count').value, 10) || 1);
+    const fix = hfcCurrentFix();
+    const add = hfcAdditional();
+    document.getElementById('sum-fix').textContent = App.formatRp(fix);
+    document.getElementById('sum-add').textContent = App.formatRp(add.total);
+    document.getElementById('sum-trucks').textContent = trucks;
+    document.getElementById('sum-total').textContent = App.formatRp((fix + add.total) * trucks);
+    document.getElementById('sum-detail').textContent = add.lines.map(l => `${l.name}: ${App.formatRp(l.subtotal)}`).join(' | ');
 }
 
 // Backend mengirim pasangan origin_* / destination_*. prefix 'orig' -> origin_*, 'dest' -> destination_*
@@ -193,7 +369,8 @@ function hfcOptions(list, placeholder) {
 
 async function loadLocations(type) {
     try {
-        hfcLocations = await App.api(`/master-biaya/locations?type=${type}`);
+        const svcQ = type === 'sea' ? `&service_type=${encodeURIComponent(hfcService())}` : '';
+        hfcLocations = await App.api(`/master-biaya/locations?type=${type}${svcQ}`);
         
         for (const prefix of ['orig', 'dest']) {
             const provs = hfcUnique(hfcLocations.map(l => hfcPlace(prefix, l).provinsi));
@@ -266,7 +443,8 @@ async function cekBiaya() {
     btn.disabled = true;
     
     try {
-        const rows = await App.api(`/master-biaya/get-costs?type=${type}&origin_kecamatan=${encodeURIComponent(okec)}&dest_kecamatan=${encodeURIComponent(dkec)}`);
+        const svcQ = type === 'sea' ? `&service_type=${encodeURIComponent(hfcService())}` : '';
+        const rows = await App.api(`/master-biaya/get-costs?type=${type}&origin_kecamatan=${encodeURIComponent(okec)}&dest_kecamatan=${encodeURIComponent(dkec)}${svcQ}`);
         
         if (!rows || rows.length === 0) {
             App.showToast('Route tidak ditemukan di Master Biaya', 'error');
@@ -291,6 +469,7 @@ async function cekBiaya() {
         document.getElementById('tonnage').value = '';
         document.getElementById('container-type').value = '';
         document.getElementById('container-wrap').classList.toggle('hidden', type !== 'sea');
+        hfcRefreshQuestions();
         hfcRenderTariffs();
         
         document.getElementById('cost-panel').classList.remove('hidden');
@@ -320,7 +499,7 @@ function hfcRenderTariffs() {
     document.getElementById('tariff-label').textContent = hfcTariffKind === 'land' ? 'Type Truck' : 'Truck Type';
     
     if (hfcTariffs.length > 1) {
-        sel.innerHTML = hfcTariffs.map((r, i) => `<option value="${i}">${App.esc(hfcTariffName(r) || 'Tanpa tipe')} - ${App.esc(App.formatRp(hfcTariffCost(r)))}</option>`).join('');
+        sel.innerHTML = hfcTariffs.map((r, i) => `<option value="${i}">${App.esc(hfcTariffName(r) || 'Tanpa tipe')}${r.gudang_muat || r.gudang_bongkar ? ` (${App.esc(r.gudang_muat || '-')} → ${App.esc(r.gudang_bongkar || '-')})` : ''} - ${App.esc(App.formatRp(hfcTariffCost(r)))}</option>`).join('');
         sel.classList.remove('hidden');
         stat.classList.add('hidden');
         wrap.classList.remove('hidden');
@@ -342,6 +521,8 @@ function hfcSelectTariff(i) {
     hfcCurrentCostId = row.id;
     hfcOriginalCost = hfcTariffCost(row);
     document.getElementById('calc-original-cost').textContent = App.formatRp(hfcOriginalCost);
+    document.getElementById('gudang-muat').textContent = row.gudang_muat || '-';
+    document.getElementById('gudang-bongkar').textContent = row.gudang_bongkar || '-';
     calculateFixCost();
 }
 
@@ -359,6 +540,7 @@ function calculateFixCost() {
     if (fix < 0) fix = 0;
     
     document.getElementById('calc-fix-cost').textContent = App.formatRp(fix);
+    hfcUpdateSummary();
 }
 
 async function submitFixCost() {
@@ -386,10 +568,24 @@ async function submitFixCost() {
     const row = hfcCurrentRow;
     
     // Detail pengiriman (diisi manual)
-    const ton = parseFloat(document.getElementById('tonnage').value);
-    if (isNaN(ton) || ton <= 0) { App.showToast('Tonase wajib diisi (lebih dari 0)', 'warning'); return; }
+    const tonRaw = document.getElementById('tonnage').value;
+    const ton = parseFloat(tonRaw);
+    if (type === 'land' && (isNaN(ton) || ton <= 0)) { App.showToast('Berat (tonase) wajib diisi untuk pengiriman darat (lebih dari 0)', 'warning'); return; }
+    if (tonRaw !== '' && (isNaN(ton) || ton <= 0)) { App.showToast('Tonase harus lebih dari 0', 'warning'); return; }
     const container = type === 'sea' ? document.getElementById('container-type').value.trim() : '';
     if (type === 'sea' && !container) { App.showToast('Type Container wajib diisi', 'warning'); return; }
+
+    const trucks = Number(document.getElementById('truck-count').value);
+    if (!Number.isInteger(trucks) || trucks < 1) { App.showToast('Jumlah truk minimal 1 (bilangan bulat)', 'warning'); return; }
+    const takedown = parseFloat(document.getElementById('takedown').value) || 0;
+    if (takedown < 0) { App.showToast('Durasi takedown tidak boleh negatif', 'warning'); return; }
+
+    const svc = hfcService();
+    const tkbmDtp = document.getElementById('q-tkbm-dtp-who').value;
+    const tkbmPtd = document.getElementById('q-tkbm-ptd-who').value;
+    if (type === 'sea' && svc === 'door_to_port' && !tkbmDtp) { App.showToast('Pilih siapa yang menanggung TKBM Door to Port', 'warning'); return; }
+    if (type === 'sea' && svc === 'port_to_door' && !tkbmPtd) { App.showToast('Pilih siapa yang menanggung TKBM Port to Door', 'warning'); return; }
+    const pts = (chk, id) => document.getElementById(chk).checked ? Math.max(1, parseInt(document.getElementById(id).value, 10) || 1) : 0;
     
     // Bentuk kiriman mengikuti POST /fix-cost/create
     const payload = {
@@ -407,7 +603,18 @@ async function submitFixCost() {
         notes: notes,
         truck_type: hfcTariffName(row) || null,
         container_type: container || null,
-        tonnage: ton
+        tonnage: isNaN(ton) ? null : ton,
+        service_type: svc,
+        gudang_muat: row.gudang_muat || null,
+        gudang_bongkar: row.gudang_bongkar || null,
+        truck_count: trucks,
+        takedown_duration: takedown,
+        multipickup_points: pts('q-multipickup', 'q-multipickup-points'),
+        multidrop_points: pts('q-multidrop', 'q-multidrop-points'),
+        kawalan: document.getElementById('q-kawalan').checked ? 1 : 0,
+        tkbm_dtp: type === 'sea' && svc === 'door_to_port' ? tkbmDtp : null,
+        tkbm_ptd: type === 'sea' && svc === 'port_to_door' ? tkbmPtd : null,
+        extra_jasa_ids: [...document.querySelectorAll('.q-extra-chk:checked')].map(e => Number(e.value))
     };
     
     const btn = document.getElementById('btn-submit-fix-cost');

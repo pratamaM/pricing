@@ -138,6 +138,8 @@ const App = {
             menuItems.push({ id: 'konfigurasi-user', icon: 'users', label: 'Konfigurasi User' });
             menuItems.push({ id: 'dashboard', icon: 'layout-dashboard', label: 'Dashboard' });
             menuItems.push({ id: 'master-biaya', icon: 'database', label: 'Master Biaya' });
+            menuItems.push({ id: 'master-jasa', icon: 'receipt', label: 'Master Jasa' });
+            menuItems.push({ id: 'master-kendaraan', icon: 'truck', label: 'Master Kendaraan' });
             menuItems.push({ id: 'hitung-fix-cost', icon: 'calculator', label: 'Hitung Fix Cost' });
             menuItems.push({ id: 'history-fix-cost', icon: 'history', label: 'History Fix Cost' });
         } else if (role === 'admin') {
@@ -145,22 +147,30 @@ const App = {
             menuItems.push({ id: 'konfigurasi-user', icon: 'users', label: 'Konfigurasi User' });
             menuItems.push({ id: 'dashboard', icon: 'layout-dashboard', label: 'Dashboard' });
             menuItems.push({ id: 'master-biaya', icon: 'database', label: 'Master Biaya' });
+            menuItems.push({ id: 'master-jasa', icon: 'receipt', label: 'Master Jasa' });
+            menuItems.push({ id: 'master-kendaraan', icon: 'truck', label: 'Master Kendaraan' });
             menuItems.push({ id: 'hitung-fix-cost', icon: 'calculator', label: 'Hitung Fix Cost' });
             menuItems.push({ id: 'history-fix-cost', icon: 'history', label: 'History Fix Cost' });
         } else if (role === 'user') {
             menuItems.push({ id: 'konfigurasi-user', icon: 'users', label: 'Konfigurasi User' });
             menuItems.push({ id: 'dashboard', icon: 'layout-dashboard', label: 'Dashboard' });
             menuItems.push({ id: 'master-biaya', icon: 'database', label: 'Master Biaya' });
+            menuItems.push({ id: 'master-jasa', icon: 'receipt', label: 'Master Jasa' });
+            menuItems.push({ id: 'master-kendaraan', icon: 'truck', label: 'Master Kendaraan' });
             menuItems.push({ id: 'hitung-fix-cost', icon: 'calculator', label: 'Hitung Fix Cost' });
             menuItems.push({ id: 'history-fix-cost', icon: 'history', label: 'History Fix Cost' });
         } else if (role === 'supervisor') {
             menuItems.push({ id: 'dashboard', icon: 'layout-dashboard', label: 'Dashboard' });
             menuItems.push({ id: 'master-biaya', icon: 'database', label: 'Master Biaya' });
+            menuItems.push({ id: 'master-jasa', icon: 'receipt', label: 'Master Jasa' });
+            menuItems.push({ id: 'master-kendaraan', icon: 'truck', label: 'Master Kendaraan' });
             menuItems.push({ id: 'hitung-fix-cost', icon: 'calculator', label: 'Hitung Fix Cost' });
             menuItems.push({ id: 'history-fix-cost', icon: 'history', label: 'History Fix Cost' });
         } else if (role === 'atasan') {
             menuItems.push({ id: 'dashboard', icon: 'layout-dashboard', label: 'Dashboard' });
             menuItems.push({ id: 'master-biaya', icon: 'database', label: 'Master Biaya' });
+            menuItems.push({ id: 'master-jasa', icon: 'receipt', label: 'Master Jasa' });
+            menuItems.push({ id: 'master-kendaraan', icon: 'truck', label: 'Master Kendaraan' });
             menuItems.push({ id: 'hitung-fix-cost', icon: 'calculator', label: 'Hitung Fix Cost' });
             menuItems.push({ id: 'history-fix-cost', icon: 'history', label: 'History Fix Cost' });
         }
@@ -194,7 +204,7 @@ const App = {
         
         // Update menu active state
         document.querySelectorAll('.nav-item').forEach(el => {
-            el.classList.toggle('active', el.dataset.page === pageId || (pageId.startsWith('master-') && el.dataset.page === 'master-biaya') || (pageId.startsWith('history-') && el.dataset.page === 'history-fix-cost'));
+            el.classList.toggle('active', el.dataset.page === pageId || (pageId === 'master-detail-biaya' && el.dataset.page === 'master-biaya') || (pageId.startsWith('history-') && el.dataset.page === 'history-fix-cost'));
         });
         
         mainEl.innerHTML = '<div class="h-full flex items-center justify-center"><div class="spinner"></div></div>';
@@ -214,6 +224,16 @@ const App = {
                     title = 'Master Biaya';
                     html = renderMasterBiaya();
                     initFn = renderMasterBiayaInit;
+                    break;
+                case 'master-jasa':
+                    title = 'Master Jasa';
+                    html = renderMasterJasa();
+                    initFn = renderMasterJasaInit;
+                    break;
+                case 'master-kendaraan':
+                    title = 'Master Kendaraan';
+                    html = renderMasterKendaraan();
+                    initFn = renderMasterKendaraanInit;
                     break;
                 case 'master-detail-biaya':
                     title = 'Detail Master Biaya';

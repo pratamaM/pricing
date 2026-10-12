@@ -3,6 +3,9 @@ const { queryAll, queryGet, queryRun } = require('../database/init');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const router = express.Router();
 
+// Layanan laut: Door to Port, Port to Port, Port to Door. Layanan darat selalu Door to Door.
+const SEA_SERVICES = ['door_to_port', 'port_to_port', 'port_to_door'];
+
 router.use(requireAuth);
 
 router.get('/list', (req, res) => {
@@ -63,7 +66,8 @@ router.get('/stats', (req, res) => {
 router.get('/locations', (req, res) => {
     try {
         const type = req.query.type === 'sea' ? 'sea' : 'land';
-        const data = queryAll(`SELECT DISTINCT origin_provinsi, origin_kota, origin_kecamatan, destination_provinsi, destination_kota, destination_kecamatan FROM master_biaya_${type} WHERE destination_kecamatan IS NOT NULL AND destination_kecamatan != ''`);
+        const svc = type === 'sea' && SEA_SERVICES.includes(req.query.service_type) ? req.query.service_type : null;
+        const data = queryAll(`SELECT DISTINCT origin_provinsi, origin_kota, origin_kecamatan, destination_provinsi, destination_kota, destination_kecamatan FROM master_biaya_${type} WHERE destination_kecamatan IS NOT NULL AND destination_kecamatan != ''${svc ? ' AND service_type = ?' : ''}`, svc ? [svc] : []);
         res.json(data);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -75,7 +79,8 @@ router.get('/get-costs', (req, res) => {
     try {
         const type = req.query.type === 'sea' ? 'sea' : 'land';
         const { origin_kecamatan, dest_kecamatan } = req.query;
-        res.json(queryAll(`SELECT * FROM master_biaya_${type} WHERE origin_kecamatan = ? AND destination_kecamatan = ? ORDER BY id`, [origin_kecamatan, dest_kecamatan]));
+        const svc = type === 'sea' && SEA_SERVICES.includes(req.query.service_type) ? req.query.service_type : null;
+        res.json(queryAll(`SELECT * FROM master_biaya_${type} WHERE origin_kecamatan = ? AND destination_kecamatan = ?${svc ? ' AND service_type = ?' : ''} ORDER BY id`, svc ? [origin_kecamatan, dest_kecamatan, svc] : [origin_kecamatan, dest_kecamatan]));
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -106,11 +111,11 @@ router.get('/count', (req, res) => {
 const LOC_FIELDS = ['origin_provinsi', 'origin_kota', 'origin_kecamatan', 'destination_provinsi', 'destination_kota', 'destination_kecamatan'];
 const EDITABLE = {
     land: {
-        text: [...LOC_FIELDS, 'type_mobil'],
+        text: [...LOC_FIELDS, 'gudang_muat', 'gudang_bongkar', 'type_mobil'],
         num: ['km', 'uj_sopir', 'tip_muat', 'tip_bongkar', 'tkbm', 'maint_fee', 'risk_claim_it', 'marketing', 'cost_pph', 'total']
     },
     sea: {
-        text: [...LOC_FIELDS, 'truck_type'],
+        text: [...LOC_FIELDS, 'gudang_muat', 'gudang_bongkar', 'truck_type'],
         num: ['km_truck_origin', 'trucking_origin', 'thc_origin_lolo', 'thc_dest', 'agent', 'tkbm', 'do_clean', 'risk_claim', 'marketing', 'jasa',
               'temas_freight', 'temas_lss', 'temas_total_cost_pph', 'meratus_freight', 'meratus_lss', 'meratus_total_cost_pph', 'submit_value']
     }
@@ -124,6 +129,10 @@ router.put('/:id', requireRole('superadmin', 'admin', 'supervisor', 'atasan'), (
 
         const spec = EDITABLE[type];
         const sets = [], params = [];
+        if (type === 'sea' && req.body.service_type !== undefined) {
+            if (!SEA_SERVICES.includes(req.body.service_type)) return res.status(400).json({ error: 'service_type harus door_to_port, port_to_port, atau port_to_door' });
+            sets.push('service_type = ?'); params.push(req.body.service_type);
+        }
         for (const col of spec.text) {
             if (req.body[col] === undefined) continue;
             const v = req.body[col] === null ? '' : String(req.body[col]).trim();

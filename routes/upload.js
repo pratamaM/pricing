@@ -30,13 +30,19 @@ const LOC = [
     t('destination_provinsi', 'DESTINATION PROVINSI'), t('destination_kota', 'DESTINATION KOTA/KABUPATEN'), t('destination_kecamatan', 'DESTINATION KECAMATAN')
 ];
 
+// Jenis layanan: land selalu door_to_door; sea dibaca dari kolom "SERVICE TYPE" (Door to Port / Port to Port / Port to Door).
+const SVC_SEA = { 'DOOR TO PORT': 'door_to_port', 'PORT TO PORT': 'port_to_port', 'PORT TO DOOR': 'port_to_door' };
+const svcLand = { col: 'service_type', kind: 'const', value: 'door_to_door', headers: [] };
+const svcSea = { col: 'service_type', kind: 'svc', headers: ['SERVICE TYPE', 'SERVICE', 'JENIS LAYANAN', 'LAYANAN'] };
+const GUDANG = [t('gudang_muat', 'GUDANG MUAT'), t('gudang_bongkar', 'GUDANG BONGKAR')];
+
 const SPEC = {
-    land: [...LOC,
+    land: [...LOC, svcLand, ...GUDANG,
         n('km', 'KM'), t('type_mobil', 'TYPE MOBIL', 'TYPE TRUCK'),
         n('uj_sopir', 'UJ SOPIR'), n('tip_muat', 'TIP MUAT'), n('tip_bongkar', 'TIP BONGKAR'), n('tkbm', 'TKBM'),
         n('maint_fee', 'MAINT. FEE'), n('risk_claim_it', 'RISK CLAIM + IT'), n('marketing', 'MARKETING'),
         n('cost_pph', 'COST + PPH'), n('total', 'TOTAL')],
-    sea: [...LOC,
+    sea: [...LOC, svcSea, ...GUDANG,
         t('truck_type', 'TRUCK TYPE'), n('km_truck_origin', 'KM TRUCK ORIGIN'),
         n('trucking_origin', 'TRUCKING ORIGIN'), n('thc_origin_lolo', 'THC ORIGIN + LOLO ORIGIN'), n('thc_dest', 'THC DEST'),
         n('agent', 'AGENT'), n('tkbm', 'TKBM'), n('do_clean', 'DO+CLEAN'), n('risk_claim', 'RISK CLAIM'),
@@ -90,10 +96,18 @@ function handleUpload(type) {
                     const row = {};
                     for (const k of Object.keys(raw)) row[norm(k)] = raw[k];
 
+                    let badService = null;
                     const vals = spec.map(s => {
+                        if (s.kind === 'const') return s.value;
                         let v = null;
                         for (const h of s.headers) {
                             if (row[h] !== undefined && row[h] !== null && row[h] !== '') { v = row[h]; break; }
+                        }
+                        if (s.kind === 'svc') {
+                            const key = toText(v) === null ? null : norm(String(v).replace(/[_-]/g, ' '));
+                            if (key === null) return 'port_to_port'; // kolom kosong -> diasumsikan Port to Port; koreksi lewat Edit
+                            if (!SVC_SEA[key]) { badService = String(v); return null; }
+                            return SVC_SEA[key];
                         }
                         return s.kind === 'num' ? toNum(v) : toText(v);
                     });
@@ -101,6 +115,7 @@ function handleUpload(type) {
                     // Baris dilewati hanya jika ke-6 kolom lokasi kosong semua.
                     // Baris yang baru berisi ORIGIN (tujuan & biaya kosong) tetap diimpor untuk dilengkapi lewat web.
                     if (!vals.slice(0, 6).some(v => v !== null)) continue;
+                    if (badService !== null) throw new Error(`Service type tidak dikenal: "${badService}" (sheet ${name}). Gunakan Door to Port, Port to Port, atau Port to Door.`);
 
                     toInsert.push([...vals, req.session.userId]);
                     c++;

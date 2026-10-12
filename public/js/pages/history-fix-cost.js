@@ -24,7 +24,9 @@ function fcCanAct(role, status) {
 
 // Ringkasan detail pengiriman: type truck, type container, tonase (kosong untuk pengajuan lama)
 function fcShipInfo(d) {
-    return App.esc([d.truck_type, d.container_type, d.tonnage ? fcTon(d.tonnage) : ''].filter(Boolean).join(' \u2022 '));
+    const svc = d.service_type ? serviceLabel(d.service_type) : '';
+    const trucks = Number(d.truck_count) > 1 ? Number(d.truck_count) + ' truk' : '';
+    return App.esc([svc, d.truck_type, d.container_type, d.tonnage ? fcTon(d.tonnage) : '', trucks].filter(Boolean).join(' \u2022 '));
 }
 
 function fcTon(v) {
