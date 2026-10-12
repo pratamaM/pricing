@@ -212,8 +212,8 @@ async function renderHistoryDetailFixCostInit(params) {
                             </div>
                         </div>
                         ${fcTrailStep('Supervisor Approval', byLevel.supervisor, data.status === 'pending')}
-                        ${fcTrailStep('Atasan Approval', byLevel.atasan, data.status === 'approved_supervisor')}
-                        ${fcTrailStep('Approval Final (Superadmin)', byLevel.admin, data.status === 'approved_atasan')}
+                        ${fcTrailStep('Atasan Approval (Final)', byLevel.atasan, data.status === 'approved_supervisor')}
+                        ${byLevel.admin ? fcTrailStep('Approval Final (data lama)', byLevel.admin, false) : ''}
                     </div>
                 </div>
                 

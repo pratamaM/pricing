@@ -6,13 +6,11 @@ const router = express.Router();
 // Admin boleh membuat pengajuan serta melihat history & detail (read-only: tidak ikut approve/reject, lihat stageFor).
 router.use(requireRole('superadmin', 'admin', 'user', 'supervisor', 'atasan'));
 
-// Tahap persetujuan berurutan: supervisor -> atasan -> final.
-// Tahap final tetap memakai kunci 'admin' (status approved_admin/rejected_admin, level 'admin') agar data lama tetap valid;
-// yang menyetujuinya kini role superadmin. Superadmin juga boleh bertindak di tahap mana pun.
+// Tahap persetujuan berurutan: supervisor -> atasan. Keputusan akhir ada di atasan (approved_atasan = Approved final).
+// Status lama approved_admin/rejected_admin tetap dikenali agar data lama valid. Superadmin tetap boleh bertindak di tahap mana pun.
 const STAGES = {
     pending:             { stage: 'supervisor', role: 'supervisor', approved: 'approved_supervisor', rejected: 'rejected_supervisor' },
-    approved_supervisor: { stage: 'atasan',     role: 'atasan',     approved: 'approved_atasan',     rejected: 'rejected_atasan' },
-    approved_atasan:     { stage: 'admin',      role: 'superadmin', approved: 'approved_admin',      rejected: 'rejected_admin' }
+    approved_supervisor: { stage: 'atasan',     role: 'atasan',     approved: 'approved_atasan',     rejected: 'rejected_atasan' }
 };
 function stageFor(role, status) {
     const s = STAGES[status];
@@ -204,7 +202,7 @@ router.get('/pending-count', (req, res) => {
         } else if (role === 'atasan') {
             count = queryGet("SELECT COUNT(*) as c FROM fix_cost_requests WHERE status = 'approved_supervisor'").c;
         } else if (role === 'superadmin') {
-            count = queryGet("SELECT COUNT(*) as c FROM fix_cost_requests WHERE status IN ('pending','approved_supervisor','approved_atasan')").c;
+            count = queryGet("SELECT COUNT(*) as c FROM fix_cost_requests WHERE status IN ('pending','approved_supervisor')").c;
         }
         
         res.json({ count });

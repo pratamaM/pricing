@@ -19,7 +19,7 @@ router.get('/summary', (req, res) => {
     try {
         const landCount = queryGet('SELECT COUNT(*) as c FROM master_biaya_land').c;
         const seaCount = queryGet('SELECT COUNT(*) as c FROM master_biaya_sea').c;
-        const pendingCount = queryGet("SELECT COUNT(*) as c FROM fix_cost_requests WHERE status IN ('pending', 'approved_supervisor', 'approved_atasan')").c;
+        const pendingCount = queryGet("SELECT COUNT(*) as c FROM fix_cost_requests WHERE status IN ('pending', 'approved_supervisor')").c;
         
         res.json({ totalLandRoutes: landCount, totalSeaRoutes: seaCount, totalPendingApprovals: pendingCount });
     } catch (err) {

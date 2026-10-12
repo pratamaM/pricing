@@ -1,10 +1,10 @@
 // ---- Helper bersama (dipakai juga oleh halaman detail) ----
-// Alur approval mengikuti backend: supervisor -> atasan -> superadmin (penyetuju akhir).
+// Alur approval mengikuti backend: supervisor -> atasan (penyetuju akhir).
 // Superadmin boleh bertindak di tahap mana pun. (Kunci internal tahap final tetap 'admin' agar data lama valid.)
 const FC_STATUS = {
     pending:             ['Menunggu Supervisor', 'bg-yellow-100 text-yellow-800'],
     approved_supervisor: ['Menunggu Atasan',     'bg-blue-100 text-blue-800'],
-    approved_atasan:     ['Menunggu Superadmin', 'bg-indigo-100 text-indigo-800'],
+    approved_atasan:     ['Approved',            'bg-green-100 text-green-800'],
     approved_admin:      ['Approved',            'bg-green-100 text-green-800'],
     rejected_supervisor: ['Ditolak Supervisor',  'bg-red-100 text-red-800'],
     rejected_atasan:     ['Ditolak Atasan',      'bg-red-100 text-red-800'],
@@ -18,7 +18,7 @@ function fcBadge(status, sizeClass) {
 
 // Role yang gilirannya menyetujui/menolak pada status tertentu
 function fcCanAct(role, status) {
-    const stageRole = { pending: 'supervisor', approved_supervisor: 'atasan', approved_atasan: 'superadmin' }[status];
+    const stageRole = { pending: 'supervisor', approved_supervisor: 'atasan' }[status];
     return !!stageRole && (role === stageRole || role === 'superadmin');
 }
 
