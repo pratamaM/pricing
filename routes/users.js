@@ -4,8 +4,8 @@ const { queryAll, queryGet, queryRun, getLastInsertId } = require('../database/i
 const { requireRole } = require('../middleware/auth');
 const router = express.Router();
 
-// Konfigurasi User: superadmin, admin (setting), dan user (sesuai menu di UI)
-router.use(requireRole('superadmin', 'admin', 'user'));
+// Konfigurasi User: hanya superadmin dan admin
+router.use(requireRole('superadmin', 'admin'));
 
 const VALID_ROLES = ['superadmin', 'admin', 'user', 'supervisor', 'atasan'];
 const isSuper = (req) => req.session.role === 'superadmin';

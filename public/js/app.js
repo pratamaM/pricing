@@ -152,7 +152,6 @@ const App = {
             menuItems.push({ id: 'hitung-fix-cost', icon: 'calculator', label: 'Hitung Fix Cost' });
             menuItems.push({ id: 'history-fix-cost', icon: 'history', label: 'History Fix Cost' });
         } else if (role === 'user') {
-            menuItems.push({ id: 'konfigurasi-user', icon: 'users', label: 'Konfigurasi User' });
             menuItems.push({ id: 'dashboard', icon: 'layout-dashboard', label: 'Dashboard' });
             menuItems.push({ id: 'master-biaya', icon: 'database', label: 'Master Biaya' });
             menuItems.push({ id: 'master-jasa', icon: 'receipt', label: 'Master Jasa' });
@@ -257,6 +256,7 @@ const App = {
                     initFn = renderHistoryDetailFixCostInit;
                     break;
                 case 'konfigurasi-user':
+                    if (!this.user || !['superadmin', 'admin'].includes(this.user.role)) { App.showToast('Anda tidak memiliki akses ke halaman ini', 'warning'); return; }
                     title = 'Konfigurasi User';
                     html = renderKonfigurasiUser();
                     initFn = renderKonfigurasiUserInit;
