@@ -178,7 +178,8 @@ const App = {
             const a = document.createElement('a');
             a.href = '#';
             a.className = `nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 transition-colors mb-1`;
-            a.innerHTML = `<i data-lucide="${item.icon}" class="w-5 h-5"></i> <span>${item.label}</span>`;
+            a.innerHTML = `<i data-lucide="${item.icon}" class="w-5 h-5"></i> <span>${item.label}</span>` +
+                (item.id === 'history-fix-cost' ? '<span id="pending-badge" class="hidden ml-auto bg-yellow-500 text-white text-xs font-semibold rounded-full px-2 py-0.5" title="Pending approval"></span>' : '');
             a.dataset.page = item.id;
             
             a.addEventListener('click', (e) => {
@@ -194,10 +195,24 @@ const App = {
         });
         
         lucide.createIcons();
+        this.refreshPendingBadge();
+    },
+    
+    // Badge "pending approval" di menu History Fix Cost, tampil untuk semua role
+    async refreshPendingBadge() {
+        try {
+            const res = await this.api('/fix-cost/pending-count');
+            const el = document.getElementById('pending-badge');
+            if (!el) return;
+            const n = Number(res.count) || 0;
+            el.textContent = n > 99 ? '99+' : n;
+            el.classList.toggle('hidden', n === 0);
+        } catch (e) { /* badge saja, abaikan */ }
     },
     
     async loadPage(pageId, params = {}) {
         this.currentPage = pageId;
+        this.refreshPendingBadge(); // badge ikut diperbarui tiap pindah halaman
         const mainEl = document.getElementById('main-content');
         const titleEl = document.getElementById('page-title');
         

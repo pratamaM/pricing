@@ -16,7 +16,7 @@ if (!fs.existsSync(uploadDir)) {
 const upload = multer({ dest: uploadDir });
 
 // Upload master biaya: superadmin, admin (setting), supervisor, atasan
-router.use(requireRole('superadmin', 'admin', 'supervisor', 'atasan'));
+router.use(requireRole('superadmin', 'admin')); // upload Excel hanya admin & superadmin
 
 // ---- Definisi kolom ----
 // Header Excel dibandingkan setelah dinormalisasi (huruf besar, spasi ganda/spasi di ujung dibuang),

@@ -2,25 +2,26 @@ let mjCategory = 'land';
 let mjList = [];
 let mjEditId = null;
 
+const mjCanAdd = () => ['superadmin', 'admin'].includes(App.user && App.user.role);
 const mjCanEdit = () => ['superadmin', 'admin', 'supervisor', 'atasan'].includes(App.user && App.user.role);
 
 function renderMasterJasa() {
     const edit = mjCanEdit();
     return `
-    <div class="space-y-4 max-w-4xl">
-        <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4">
+    <div class="space-y-4 max-w-3xl mx-auto">
+        <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100 flex flex-col sm:flex-row justify-center sm:justify-between items-center gap-4">
             <div class="flex bg-gray-100 p-1 rounded-lg w-full sm:w-auto">
                 <button id="mj-tab-land" class="flex-1 sm:flex-none px-6 py-2 rounded-md text-sm font-medium transition-colors bg-white shadow text-gray-800">Jasa Darat</button>
                 <button id="mj-tab-sea" class="flex-1 sm:flex-none px-6 py-2 rounded-md text-sm font-medium transition-colors text-gray-500 hover:text-gray-700">Jasa Laut</button>
             </div>
-            ${edit ? `<button id="mj-add" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"><i data-lucide="plus" class="w-4 h-4"></i> Tambah Jasa</button>` : ''}
+            ${mjCanAdd() ? `<button id="mj-add" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"><i data-lucide="plus" class="w-4 h-4"></i> Tambah Jasa</button>` : ''}
         </div>
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <table class="w-full text-left text-sm">
                 <thead class="bg-gray-50 text-gray-600 border-b">
                     <tr>
                         <th class="px-4 py-3 font-medium">Nama Jasa</th>
-                        <th class="px-4 py-3 font-medium">Jenis</th>
+                        <th class="px-4 py-3 font-medium text-center">Jenis</th>
                         <th class="px-4 py-3 font-medium text-right">Nominal</th>
                         ${edit ? '<th class="px-4 py-3 font-medium text-center">Aksi</th>' : ''}
                     </tr>
@@ -28,7 +29,7 @@ function renderMasterJasa() {
                 <tbody id="mj-tbody" class="divide-y divide-gray-100"></tbody>
             </table>
         </div>
-        <p class="text-xs text-gray-500">Jasa bawaan (Multi Pickup, Multi Drop, Kawalan, TKBM) dipakai pada pertanyaan biaya tambahan di Hitung Fix Cost. Jasa tambahan akan muncul sebagai pilihan opsional.</p>
+        <p class="text-xs text-gray-500 text-center">Jasa bawaan (Multi Pickup, Multi Drop, Kawalan, TKBM) dipakai pada pertanyaan biaya tambahan di Hitung Fix Cost. Jasa tambahan akan muncul sebagai pilihan opsional.</p>
     </div>
 
     <div id="mj-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center">
@@ -109,7 +110,7 @@ async function mjLoad() {
         tbody.innerHTML = mjList.map(j => `
             <tr class="hover:bg-gray-50">
                 <td class="px-4 py-3 font-medium text-gray-900">${App.esc(j.name)}</td>
-                <td class="px-4 py-3 text-gray-500">${j.code ? 'Bawaan' : 'Tambahan'}</td>
+                <td class="px-4 py-3 text-gray-500 text-center">${j.code ? 'Bawaan' : 'Tambahan'}</td>
                 <td class="px-4 py-3 text-right">${App.formatRp(j.amount)}</td>
                 ${edit ? `<td class="px-4 py-3 text-center">
                     <button onclick="mjEdit(${Number(j.id)})" class="text-blue-600 hover:bg-blue-50 p-1.5 rounded transition"><i data-lucide="edit-2" class="w-4 h-4"></i></button>

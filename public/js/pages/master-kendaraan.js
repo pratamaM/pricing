@@ -1,18 +1,19 @@
 let mkCategory = 'land';
 let mkList = [];
 
+const mkCanAdd = () => ['superadmin', 'admin'].includes(App.user && App.user.role);
 const mkCanEdit = () => ['superadmin', 'admin', 'supervisor', 'atasan'].includes(App.user && App.user.role);
 
 function renderMasterKendaraan() {
     const edit = mkCanEdit();
     return `
-    <div class="space-y-4 max-w-3xl">
-        <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4">
+    <div class="space-y-4 max-w-xl mx-auto">
+        <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100 flex flex-col sm:flex-row justify-center sm:justify-between items-center gap-4">
             <div class="flex bg-gray-100 p-1 rounded-lg w-full sm:w-auto">
                 <button id="mk-tab-land" class="flex-1 sm:flex-none px-6 py-2 rounded-md text-sm font-medium transition-colors bg-white shadow text-gray-800">Kendaraan Darat</button>
                 <button id="mk-tab-sea" class="flex-1 sm:flex-none px-6 py-2 rounded-md text-sm font-medium transition-colors text-gray-500 hover:text-gray-700">Kendaraan Laut</button>
             </div>
-            ${edit ? `
+            ${mkCanAdd() ? `
             <form id="mk-form" class="flex items-center gap-2 w-full sm:w-auto">
                 <input type="text" id="mk-name" maxlength="50" required placeholder="mis. 20 Feet" class="w-full sm:w-48 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                 <button type="submit" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"><i data-lucide="plus" class="w-4 h-4"></i> Tambah</button>
@@ -22,14 +23,14 @@ function renderMasterKendaraan() {
             <table class="w-full text-left text-sm">
                 <thead class="bg-gray-50 text-gray-600 border-b">
                     <tr>
-                        <th class="px-4 py-3 font-medium">Nama Kendaraan</th>
+                        <th class="px-4 py-3 font-medium text-center">Nama Kendaraan</th>
                         ${edit ? '<th class="px-4 py-3 font-medium text-center">Aksi</th>' : ''}
                     </tr>
                 </thead>
                 <tbody id="mk-tbody" class="divide-y divide-gray-100"></tbody>
             </table>
         </div>
-        <p class="text-xs text-gray-500">Daftar ini dipakai sebagai pilihan Type Truck / Type Container di Master Biaya dan Hitung Fix Cost.</p>
+        <p class="text-xs text-gray-500 text-center">Daftar ini dipakai sebagai pilihan Type Truck / Type Container di Master Biaya dan Hitung Fix Cost.</p>
     </div>`;
 }
 
@@ -74,7 +75,7 @@ async function mkLoad() {
         }
         tbody.innerHTML = mkList.map(k => `
             <tr class="hover:bg-gray-50">
-                <td class="px-4 py-3 font-medium text-gray-900">${App.esc(k.name)}</td>
+                <td class="px-4 py-3 font-medium text-gray-900 text-center">${App.esc(k.name)}</td>
                 ${edit ? `<td class="px-4 py-3 text-center">
                     <button onclick="mkRename(${Number(k.id)})" class="text-blue-600 hover:bg-blue-50 p-1.5 rounded transition"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
                     <button onclick="mkDelete(${Number(k.id)})" class="text-red-600 hover:bg-red-50 p-1.5 rounded transition ml-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>

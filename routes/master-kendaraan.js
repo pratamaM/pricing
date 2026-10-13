@@ -6,6 +6,7 @@ const router = express.Router();
 router.use(requireAuth);
 
 const EDIT_ROLES = ['superadmin', 'admin', 'supervisor', 'atasan'];
+const ADD_ROLES = ['superadmin', 'admin']; // tambah jasa / kendaraan hanya admin & superadmin
 const errMsg = (err) => (err && err.message) ? err.message : String(err);
 
 router.get('/', (req, res) => {
@@ -20,7 +21,7 @@ router.get('/', (req, res) => {
     }
 });
 
-router.post('/', requireRole(...EDIT_ROLES), (req, res) => {
+router.post('/', requireRole(...ADD_ROLES), (req, res) => {
     try {
         const { category } = req.body;
         const name = String(req.body.name || '').trim().slice(0, 50);

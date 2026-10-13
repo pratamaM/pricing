@@ -6,6 +6,7 @@ const router = express.Router();
 router.use(requireAuth);
 
 const EDIT_ROLES = ['superadmin', 'admin', 'supervisor', 'atasan'];
+const ADD_ROLES = ['superadmin', 'admin']; // tambah jasa / kendaraan hanya admin & superadmin
 const errMsg = (err) => (err && err.message) ? err.message : String(err);
 
 router.get('/', (req, res) => {
@@ -28,7 +29,7 @@ function parseBody(body) {
     return { name, amount };
 }
 
-router.post('/', requireRole(...EDIT_ROLES), (req, res) => {
+router.post('/', requireRole(...ADD_ROLES), (req, res) => {
     try {
         if (!['land', 'sea'].includes(req.body.category)) return res.status(400).json({ error: 'category harus land atau sea' });
         const p = parseBody(req.body);

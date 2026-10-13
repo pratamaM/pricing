@@ -201,7 +201,8 @@ router.get('/pending-count', (req, res) => {
             count = queryGet("SELECT COUNT(*) as c FROM fix_cost_requests WHERE status = 'pending'").c;
         } else if (role === 'atasan') {
             count = queryGet("SELECT COUNT(*) as c FROM fix_cost_requests WHERE status = 'approved_supervisor'").c;
-        } else if (role === 'superadmin') {
+        } else {
+            // superadmin, admin, user: semua pengajuan yang masih menunggu approval
             count = queryGet("SELECT COUNT(*) as c FROM fix_cost_requests WHERE status IN ('pending','approved_supervisor')").c;
         }
         
