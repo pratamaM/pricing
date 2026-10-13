@@ -236,6 +236,7 @@ const App = {
                     initFn = renderMasterKendaraanInit;
                     break;
                 case 'master-detail-biaya':
+                    if (this.user && this.user.role === 'user') { App.showToast('Anda tidak memiliki akses ke halaman ini', 'warning'); return; }
                     title = 'Detail Master Biaya';
                     html = renderMasterDetailBiaya(params);
                     initFn = renderMasterDetailBiayaInit;

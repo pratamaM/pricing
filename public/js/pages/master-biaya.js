@@ -178,6 +178,7 @@ async function loadMasterBiayaData() {
             return;
         }
         
+        const canDetail = App.user && App.user.role !== 'user'; // role user tidak punya tombol Detail
         tbody.innerHTML = res.data.map(item => {
             const origin = [item.origin_provinsi, item.origin_kota, item.origin_kecamatan].filter(Boolean).join(', ');
             const dest = [item.destination_provinsi, item.destination_kota, item.destination_kecamatan].filter(Boolean).join(', ');
@@ -193,7 +194,7 @@ async function loadMasterBiayaData() {
                     <td class="px-4 py-3">${App.esc(item.type_mobil || '-')}</td>
                     <td class="px-4 py-3 font-medium">${App.formatRp(item.total)}</td>
                     <td class="px-4 py-3 text-center">
-                        <button onclick="App.loadPage('master-detail-biaya', {id: '${item.id}', type: 'land'})" class="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded border border-blue-200 text-xs font-medium transition">Detail</button>
+                        ${canDetail ? `<button onclick="App.loadPage('master-detail-biaya', {id: '${item.id}', type: 'land'})" class="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded border border-blue-200 text-xs font-medium transition">Detail</button>` : ''}
                     </td>
                 </tr>
                 `;
@@ -209,7 +210,7 @@ async function loadMasterBiayaData() {
                     <td class="px-4 py-3 font-medium">${App.formatRp(item.temas_total_cost_pph)}</td>
                     <td class="px-4 py-3 font-medium">${App.formatRp(item.meratus_total_cost_pph)}</td>
                     <td class="px-4 py-3 text-center">
-                        <button onclick="App.loadPage('master-detail-biaya', {id: '${item.id}', type: 'sea'})" class="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded border border-blue-200 text-xs font-medium transition">Detail</button>
+                        ${canDetail ? `<button onclick="App.loadPage('master-detail-biaya', {id: '${item.id}', type: 'sea'})" class="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded border border-blue-200 text-xs font-medium transition">Detail</button>` : ''}
                     </td>
                 </tr>
                 `;
