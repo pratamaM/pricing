@@ -3,7 +3,7 @@ let mjList = [];
 let mjEditId = null;
 
 const mjCanAdd = () => ['superadmin', 'admin'].includes(App.user && App.user.role);
-const mjCanEdit = () => ['superadmin', 'admin', 'supervisor', 'atasan'].includes(App.user && App.user.role);
+const mjCanEdit = () => ['superadmin', 'admin'].includes(App.user && App.user.role);
 
 function renderMasterJasa() {
     const edit = mjCanEdit();

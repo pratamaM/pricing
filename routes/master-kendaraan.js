@@ -5,8 +5,7 @@ const router = express.Router();
 
 router.use(requireAuth);
 
-const EDIT_ROLES = ['superadmin', 'admin', 'supervisor', 'atasan'];
-const ADD_ROLES = ['superadmin', 'admin']; // tambah jasa / kendaraan hanya admin & superadmin
+const ADMIN_ROLES = ['superadmin', 'admin']; // tambah, ubah, hapus: hanya admin & superadmin
 const errMsg = (err) => (err && err.message) ? err.message : String(err);
 
 router.get('/', (req, res) => {
@@ -21,7 +20,7 @@ router.get('/', (req, res) => {
     }
 });
 
-router.post('/', requireRole(...ADD_ROLES), (req, res) => {
+router.post('/', requireRole(...ADMIN_ROLES), (req, res) => {
     try {
         const { category } = req.body;
         const name = String(req.body.name || '').trim().slice(0, 50);
@@ -35,7 +34,7 @@ router.post('/', requireRole(...ADD_ROLES), (req, res) => {
     }
 });
 
-router.put('/:id', requireRole(...EDIT_ROLES), (req, res) => {
+router.put('/:id', requireRole(...ADMIN_ROLES), (req, res) => {
     try {
         const row = queryGet('SELECT id, category FROM master_kendaraan WHERE id = ?', [req.params.id]);
         if (!row) return res.status(404).json({ error: 'Not found' });
@@ -49,7 +48,7 @@ router.put('/:id', requireRole(...EDIT_ROLES), (req, res) => {
     }
 });
 
-router.delete('/:id', requireRole(...EDIT_ROLES), (req, res) => {
+router.delete('/:id', requireRole(...ADMIN_ROLES), (req, res) => {
     try {
         if (!queryGet('SELECT id FROM master_kendaraan WHERE id = ?', [req.params.id])) return res.status(404).json({ error: 'Not found' });
         queryRun('DELETE FROM master_kendaraan WHERE id = ?', [req.params.id]);

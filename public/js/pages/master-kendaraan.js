@@ -2,7 +2,7 @@ let mkCategory = 'land';
 let mkList = [];
 
 const mkCanAdd = () => ['superadmin', 'admin'].includes(App.user && App.user.role);
-const mkCanEdit = () => ['superadmin', 'admin', 'supervisor', 'atasan'].includes(App.user && App.user.role);
+const mkCanEdit = () => ['superadmin', 'admin'].includes(App.user && App.user.role);
 
 function renderMasterKendaraan() {
     const edit = mkCanEdit();
