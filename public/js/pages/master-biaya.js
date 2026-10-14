@@ -137,35 +137,22 @@ async function loadMasterBiayaData() {
     const tbody = document.getElementById('mb-tbody');
     const thead = document.getElementById('mb-thead');
     
-    if (currentMasterBiayaType === 'land') {
-        thead.innerHTML = `
-            <th class="px-4 py-3 font-medium">Origin</th>
-            <th class="px-4 py-3 font-medium">Destination</th>
-            <th class="px-4 py-3 font-medium">Gudang Muat</th>
-            <th class="px-4 py-3 font-medium">Gudang Bongkar</th>
-            <th class="px-4 py-3 font-medium">KM</th>
-            <th class="px-4 py-3 font-medium">Type Mobil</th>
-            <th class="px-4 py-3 font-medium">Total Cost</th>
-            <th class="px-4 py-3 font-medium text-center">Action</th>
-        `;
-    } else {
-        thead.innerHTML = `
-            <th class="px-4 py-3 font-medium">Origin</th>
-            <th class="px-4 py-3 font-medium">Destination</th>
-            <th class="px-4 py-3 font-medium">Layanan</th>
-            <th class="px-4 py-3 font-medium">Gudang Muat</th>
-            <th class="px-4 py-3 font-medium">Gudang Bongkar</th>
-            <th class="px-4 py-3 font-medium">Truck Type</th>
-            <th class="px-4 py-3 font-medium">Temas Total</th>
-            <th class="px-4 py-3 font-medium">Meratus Total</th>
-            <th class="px-4 py-3 font-medium text-center">Action</th>
-        `;
-    }
+    // Tabel depan: Origin, Destination, Total Biaya. Rinciannya ada di tombol Detail (kolom Action).
+    // Role "user" tidak punya kolom Action.
+    const canDetail = !!App.user && App.user.role !== 'user';
+    const cols = canDetail ? 4 : 3;
+    thead.innerHTML = `
+        <th class="px-4 py-3 font-medium">Origin</th>
+        <th class="px-4 py-3 font-medium">Destination</th>
+        <th class="px-4 py-3 font-medium text-right">Total Biaya</th>
+        ${canDetail ? '<th class="px-4 py-3 font-medium text-center">Action</th>' : ''}
+    `;
     
-    tbody.innerHTML = `<tr><td colspan="9" class="p-8 text-center"><div class="spinner mx-auto border-gray-400"></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="${cols}" class="p-8 text-center"><div class="spinner mx-auto border-gray-400"></div></td></tr>`;
     
     try {
-        const res = await App.api(`/master-biaya/list?type=${currentMasterBiayaType}&search=${encodeURIComponent(currentMasterBiayaSearch)}&page=${currentMasterBiayaPage}&limit=20`);
+        const type = currentMasterBiayaType;
+        const res = await App.api(`/master-biaya/list?type=${type}&search=${encodeURIComponent(currentMasterBiayaSearch)}&page=${currentMasterBiayaPage}&limit=20`);
         
         document.getElementById('mb-total').textContent = res.total;
         document.getElementById('mb-page-info').textContent = `Page ${currentMasterBiayaPage} of ${Math.ceil(res.total/20) || 1}`;
@@ -173,52 +160,29 @@ async function loadMasterBiayaData() {
         document.getElementById('btn-next').disabled = currentMasterBiayaPage >= Math.ceil(res.total/20);
         
         if (res.data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="9" class="p-8 text-center text-gray-500"><i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> No data found</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="${cols}" class="p-8 text-center text-gray-500"><i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> No data found</td></tr>`;
             lucide.createIcons();
             return;
         }
         
-        const canDetail = App.user && App.user.role !== 'user'; // role user tidak punya tombol Detail
         tbody.innerHTML = res.data.map(item => {
             const origin = [item.origin_provinsi, item.origin_kota, item.origin_kecamatan].filter(Boolean).join(', ');
             const dest = [item.destination_provinsi, item.destination_kota, item.destination_kecamatan].filter(Boolean).join(', ');
-            
-            if (currentMasterBiayaType === 'land') {
-                return `
-                <tr class="hover:bg-gray-50">
-                    <td class="px-4 py-3">${App.esc(origin || '-')}</td>
-                    <td class="px-4 py-3">${App.esc(dest || '-')}</td>
-                    <td class="px-4 py-3">${App.esc(item.gudang_muat || '-')}</td>
-                    <td class="px-4 py-3">${App.esc(item.gudang_bongkar || '-')}</td>
-                    <td class="px-4 py-3">${App.esc(item.km || '-')}</td>
-                    <td class="px-4 py-3">${App.esc(item.type_mobil || '-')}</td>
-                    <td class="px-4 py-3 font-medium">${App.formatRp(item.total)}</td>
-                    <td class="px-4 py-3 text-center">
-                        ${canDetail ? `<button onclick="App.loadPage('master-detail-biaya', {id: '${item.id}', type: 'land'})" class="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded border border-blue-200 text-xs font-medium transition">Detail</button>` : ''}
-                    </td>
-                </tr>
-                `;
-            } else {
-                return `
-                <tr class="hover:bg-gray-50">
-                    <td class="px-4 py-3">${App.esc(origin || '-')}</td>
-                    <td class="px-4 py-3">${App.esc(dest || '-')}</td>
-                    <td class="px-4 py-3">${App.esc(serviceLabel(item.service_type))}</td>
-                    <td class="px-4 py-3">${App.esc(item.gudang_muat || '-')}</td>
-                    <td class="px-4 py-3">${App.esc(item.gudang_bongkar || '-')}</td>
-                    <td class="px-4 py-3">${App.esc(item.truck_type || '-')}</td>
-                    <td class="px-4 py-3 font-medium">${App.formatRp(item.temas_total_cost_pph)}</td>
-                    <td class="px-4 py-3 font-medium">${App.formatRp(item.meratus_total_cost_pph)}</td>
-                    <td class="px-4 py-3 text-center">
-                        ${canDetail ? `<button onclick="App.loadPage('master-detail-biaya', {id: '${item.id}', type: 'sea'})" class="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded border border-blue-200 text-xs font-medium transition">Detail</button>` : ''}
-                    </td>
-                </tr>
-                `;
-            }
+            // Darat: kolom Total. Laut: nilai SUBMIT (dasar perhitungan di Hitung Fix Cost).
+            const total = type === 'land' ? item.total : item.submit_value;
+            return `
+            <tr class="hover:bg-gray-50">
+                <td class="px-4 py-3">${App.esc(origin || '-')}</td>
+                <td class="px-4 py-3">${App.esc(dest || '-')}</td>
+                <td class="px-4 py-3 font-medium text-right">${App.formatRp(total)}</td>
+                ${canDetail ? `<td class="px-4 py-3 text-center">
+                    <button onclick="App.loadPage('master-detail-biaya', {id: '${Number(item.id)}', type: '${type}'})" class="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded border border-blue-200 text-xs font-medium transition">Detail</button>
+                </td>` : ''}
+            </tr>`;
         }).join('');
         lucide.createIcons();
         
     } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="9" class="p-8 text-center text-red-500">Failed to load data</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${cols}" class="p-8 text-center text-red-500">Failed to load data</td></tr>`;
     }
 }
