@@ -117,25 +117,29 @@ function renderHitungFixCost() {
                 <!-- Pertanyaan biaya tambahan -->
                 <div class="md:col-span-3 mt-2 pt-4 border-t border-gray-100">
                     <h4 class="font-medium text-gray-800 mb-3">Biaya Tambahan</h4>
+                    <p class="text-xs text-gray-500 mb-3">Semua jasa bersifat opsional. Nominal terisi otomatis dari Master Jasa, tetapi bisa diubah sesuai pengiriman ini.</p>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                         <div>
-                            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="q-multipickup" class="w-4 h-4 text-blue-600"> <span class="text-sm font-medium text-gray-700">Multi Pickup?</span></label>
-                            <div id="q-multipickup-n" class="hidden mt-2"><input type="number" id="q-multipickup-points" min="1" step="1" value="1" class="w-40 border-gray-300 rounded-lg p-2 border text-sm focus:ring-2 focus:ring-blue-500 outline-none"> <span class="text-xs text-gray-500">titik tambahan</span></div>
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="q-multipickup" class="w-4 h-4 text-blue-600"> <span class="text-sm font-medium text-gray-700">Multi Pickup</span></label>
+                            <div id="q-multipickup-n" class="hidden mt-2 flex flex-wrap items-center gap-2"><input type="number" id="q-multipickup-points" min="1" step="1" value="1" class="w-24 border-gray-300 rounded-lg p-2 border text-sm focus:ring-2 focus:ring-blue-500 outline-none"> <span class="text-xs text-gray-500">titik x</span> <input type="number" id="q-multipickup-amt" min="0" step="any" placeholder="Rp" class="w-36 border-gray-300 rounded-lg p-2 border text-sm focus:ring-2 focus:ring-blue-500 outline-none"></div>
                         </div>
                         <div>
-                            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="q-multidrop" class="w-4 h-4 text-blue-600"> <span class="text-sm font-medium text-gray-700">Multi Drop?</span></label>
-                            <div id="q-multidrop-n" class="hidden mt-2"><input type="number" id="q-multidrop-points" min="1" step="1" value="1" class="w-40 border-gray-300 rounded-lg p-2 border text-sm focus:ring-2 focus:ring-blue-500 outline-none"> <span class="text-xs text-gray-500">titik tambahan</span></div>
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="q-multidrop" class="w-4 h-4 text-blue-600"> <span class="text-sm font-medium text-gray-700">Multi Drop</span></label>
+                            <div id="q-multidrop-n" class="hidden mt-2 flex flex-wrap items-center gap-2"><input type="number" id="q-multidrop-points" min="1" step="1" value="1" class="w-24 border-gray-300 rounded-lg p-2 border text-sm focus:ring-2 focus:ring-blue-500 outline-none"> <span class="text-xs text-gray-500">titik x</span> <input type="number" id="q-multidrop-amt" min="0" step="any" placeholder="Rp" class="w-36 border-gray-300 rounded-lg p-2 border text-sm focus:ring-2 focus:ring-blue-500 outline-none"></div>
                         </div>
                         <div>
-                            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="q-kawalan" class="w-4 h-4 text-blue-600"> <span class="text-sm font-medium text-gray-700">Perlu kawalan?</span></label>
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="q-kawalan" class="w-4 h-4 text-blue-600"> <span class="text-sm font-medium text-gray-700">Kawalan</span></label>
+                            <div id="q-kawalan-n" class="hidden mt-2"><input type="number" id="q-kawalan-amt" min="0" step="any" placeholder="Rp" class="w-36 border-gray-300 rounded-lg p-2 border text-sm focus:ring-2 focus:ring-blue-500 outline-none"></div>
                         </div>
                         <div id="q-tkbm-dtp" class="hidden">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">TKBM Door to Port ditanggung siapa? <span class="text-red-500">*</span></label>
-                            <select id="q-tkbm-dtp-who" class="w-full border-gray-300 rounded-lg p-2 border text-sm focus:ring-2 focus:ring-blue-500 outline-none"><option value="">Pilih...</option><option value="customer">Customer</option><option value="perusahaan">Perusahaan</option></select>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">TKBM Door to Port ditanggung siapa? (opsional)</label>
+                            <select id="q-tkbm-dtp-who" class="w-full border-gray-300 rounded-lg p-2 border text-sm focus:ring-2 focus:ring-blue-500 outline-none"><option value="">Tidak dipilih</option><option value="customer">Customer</option><option value="perusahaan">Perusahaan</option></select>
+                            <div id="q-tkbm-dtp-n" class="hidden mt-2"><input type="number" id="q-tkbm-dtp-amt" min="0" step="any" placeholder="Rp" class="w-36 border-gray-300 rounded-lg p-2 border text-sm focus:ring-2 focus:ring-blue-500 outline-none"></div>
                         </div>
                         <div id="q-tkbm-ptd" class="hidden">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">TKBM Port to Door ditanggung siapa? <span class="text-red-500">*</span></label>
-                            <select id="q-tkbm-ptd-who" class="w-full border-gray-300 rounded-lg p-2 border text-sm focus:ring-2 focus:ring-blue-500 outline-none"><option value="">Pilih...</option><option value="customer">Customer</option><option value="perusahaan">Perusahaan</option></select>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">TKBM Port to Door ditanggung siapa? (opsional)</label>
+                            <select id="q-tkbm-ptd-who" class="w-full border-gray-300 rounded-lg p-2 border text-sm focus:ring-2 focus:ring-blue-500 outline-none"><option value="">Tidak dipilih</option><option value="customer">Customer</option><option value="perusahaan">Perusahaan</option></select>
+                            <div id="q-tkbm-ptd-n" class="hidden mt-2"><input type="number" id="q-tkbm-ptd-amt" min="0" step="any" placeholder="Rp" class="w-36 border-gray-300 rounded-lg p-2 border text-sm focus:ring-2 focus:ring-blue-500 outline-none"></div>
                         </div>
                     </div>
                     <div id="q-extra" class="hidden mt-4">
@@ -221,19 +225,25 @@ async function renderHitungFixCostInit() {
         document.getElementById('cost-panel').classList.add('hidden');
     });
 
-    // Pertanyaan biaya tambahan -> hitung ulang ringkasan
-    for (const [chk, box] of [['q-multipickup', 'q-multipickup-n'], ['q-multidrop', 'q-multidrop-n']]) {
+    // Pertanyaan biaya tambahan (semua opsional) -> tampilkan kolom nominal & hitung ulang ringkasan
+    for (const [chk, box] of [['q-multipickup', 'q-multipickup-n'], ['q-multidrop', 'q-multidrop-n'], ['q-kawalan', 'q-kawalan-n']]) {
         document.getElementById(chk).addEventListener('change', (e) => {
             document.getElementById(box).classList.toggle('hidden', !e.target.checked);
             hfcUpdateSummary();
         });
     }
-    ['q-multipickup-points', 'q-multidrop-points', 'q-kawalan', 'q-tkbm-dtp-who', 'q-tkbm-ptd-who', 'truck-count'].forEach(id => {
+    for (const [sel, box] of [['q-tkbm-dtp-who', 'q-tkbm-dtp-n'], ['q-tkbm-ptd-who', 'q-tkbm-ptd-n']]) {
+        document.getElementById(sel).addEventListener('change', (e) => {
+            document.getElementById(box).classList.toggle('hidden', e.target.value !== 'perusahaan');
+            hfcUpdateSummary();
+        });
+    }
+    ['q-multipickup-points', 'q-multipickup-amt', 'q-multidrop-points', 'q-multidrop-amt', 'q-kawalan-amt', 'q-tkbm-dtp-amt', 'q-tkbm-ptd-amt', 'truck-count'].forEach(id => {
         const el = document.getElementById(id);
         el.addEventListener('input', hfcUpdateSummary);
         el.addEventListener('change', hfcUpdateSummary);
     });
-
+    
     // Master Jasa & Master Kendaraan (untuk biaya tambahan dan saran type container)
     try {
         hfcJasa = await App.api('/master-jasa');
@@ -288,7 +298,12 @@ function hfcApplyTypeUi() {
     document.getElementById('hfc-service').classList.toggle('hidden', !sea);
 }
 
-// Pertanyaan yang tampil mengikuti jenis layanan; nominal berasal dari Master Jasa
+// Pertanyaan yang tampil mengikuti jenis layanan. Semua jasa opsional; nominal bawaan dari Master Jasa (bisa diubah)
+function hfcDefaultAmount(type, code) {
+    const j = hfcJasa.find(x => x.category === type && x.code === code);
+    return j && Number(j.amount) > 0 ? Number(j.amount) : '';
+}
+
 function hfcRefreshQuestions() {
     const type = hfcType(), svc = hfcService();
     document.getElementById('q-tkbm-dtp').classList.toggle('hidden', !(type === 'sea' && svc === 'door_to_port'));
@@ -296,9 +311,14 @@ function hfcRefreshQuestions() {
     document.getElementById('ton-req').classList.toggle('hidden', type !== 'land'); // berat wajib untuk darat
 
     for (const id of ['q-multipickup', 'q-multidrop', 'q-kawalan']) document.getElementById(id).checked = false;
-    for (const id of ['q-multipickup-n', 'q-multidrop-n']) document.getElementById(id).classList.add('hidden');
+    for (const id of ['q-multipickup-n', 'q-multidrop-n', 'q-kawalan-n', 'q-tkbm-dtp-n', 'q-tkbm-ptd-n']) document.getElementById(id).classList.add('hidden');
     document.getElementById('q-multipickup-points').value = 1;
     document.getElementById('q-multidrop-points').value = 1;
+    document.getElementById('q-multipickup-amt').value = hfcDefaultAmount(type, 'multipickup');
+    document.getElementById('q-multidrop-amt').value = hfcDefaultAmount(type, 'multidrop');
+    document.getElementById('q-kawalan-amt').value = hfcDefaultAmount(type, 'kawalan');
+    document.getElementById('q-tkbm-dtp-amt').value = hfcDefaultAmount(type, 'tkbm_dtp');
+    document.getElementById('q-tkbm-ptd-amt').value = hfcDefaultAmount(type, 'tkbm_ptd');
     document.getElementById('q-tkbm-dtp-who').value = '';
     document.getElementById('q-tkbm-ptd-who').value = '';
     document.getElementById('truck-count').value = 1;
@@ -307,29 +327,48 @@ function hfcRefreshQuestions() {
     const extras = hfcJasa.filter(j => j.category === type && !j.code);
     document.getElementById('q-extra').classList.toggle('hidden', extras.length === 0);
     document.getElementById('q-extra-list').innerHTML = extras.map(j => `
-        <label class="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
-            <input type="checkbox" class="q-extra-chk w-4 h-4 text-blue-600" value="${Number(j.id)}">
-            <span>${App.esc(j.name)} - ${App.esc(App.formatRp(j.amount))}</span>
-        </label>`).join('');
-    document.querySelectorAll('.q-extra-chk').forEach(el => el.addEventListener('change', hfcUpdateSummary));
+        <div class="flex flex-wrap items-center gap-2 text-sm text-gray-700">
+            <label class="flex items-center gap-2 cursor-pointer min-w-[12rem]">
+                <input type="checkbox" class="q-extra-chk w-4 h-4 text-blue-600" value="${Number(j.id)}">
+                <span>${App.esc(j.name)}</span>
+            </label>
+            <input type="number" min="0" step="any" placeholder="Rp" value="${Number(j.amount) > 0 ? Number(j.amount) : ''}" data-id="${Number(j.id)}" class="q-extra-amt hidden w-36 border-gray-300 rounded-lg p-2 border text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+        </div>`).join('');
+    document.querySelectorAll('.q-extra-chk').forEach(el => el.addEventListener('change', () => {
+        const amtEl = document.querySelector(`.q-extra-amt[data-id="${el.value}"]`);
+        if (amtEl) amtEl.classList.toggle('hidden', !el.checked);
+        hfcUpdateSummary();
+    }));
+    document.querySelectorAll('.q-extra-amt').forEach(el => el.addEventListener('input', hfcUpdateSummary));
 }
 
-// Hitung biaya tambahan per truk dari jawaban + Master Jasa (server menghitung ulang saat disimpan)
+// Nominal per satuan: isian pengguna bila ada, kalau kosong pakai nominal Master Jasa
+function hfcUnit(id, master) {
+    const v = document.getElementById(id).value;
+    if (v === '') return Number(master && master.amount) || 0;
+    return Number(v);
+}
+
+// Hitung biaya tambahan per truk dari jawaban (server menghitung ulang saat disimpan)
 function hfcAdditional() {
     const type = hfcType();
     const byCode = Object.fromEntries(hfcJasa.filter(j => j.category === type && j.code).map(j => [j.code, j]));
     const lines = [];
-    const add = (j, qty, label) => { if (j && qty > 0) lines.push({ name: label || j.name, subtotal: (Number(j.amount) || 0) * qty }); };
+    const add = (j, qty, unit) => { if (j && qty > 0 && Number.isFinite(unit) && unit >= 0) lines.push({ name: j.name, subtotal: unit * qty }); };
     const pts = (id) => Math.max(0, parseInt(document.getElementById(id).value, 10) || 0);
-    if (document.getElementById('q-multipickup').checked) add(byCode.multipickup, pts('q-multipickup-points'));
-    if (document.getElementById('q-multidrop').checked) add(byCode.multidrop, pts('q-multidrop-points'));
-    if (document.getElementById('q-kawalan').checked) add(byCode.kawalan, 1);
+    if (document.getElementById('q-multipickup').checked) add(byCode.multipickup, pts('q-multipickup-points'), hfcUnit('q-multipickup-amt', byCode.multipickup));
+    if (document.getElementById('q-multidrop').checked) add(byCode.multidrop, pts('q-multidrop-points'), hfcUnit('q-multidrop-amt', byCode.multidrop));
+    if (document.getElementById('q-kawalan').checked) add(byCode.kawalan, 1, hfcUnit('q-kawalan-amt', byCode.kawalan));
     if (type === 'sea') {
-        if (document.getElementById('q-tkbm-dtp-who').value === 'perusahaan') add(byCode.tkbm_dtp, 1);
-        if (document.getElementById('q-tkbm-ptd-who').value === 'perusahaan') add(byCode.tkbm_ptd, 1);
+        if (document.getElementById('q-tkbm-dtp-who').value === 'perusahaan') add(byCode.tkbm_dtp, 1, hfcUnit('q-tkbm-dtp-amt', byCode.tkbm_dtp));
+        if (document.getElementById('q-tkbm-ptd-who').value === 'perusahaan') add(byCode.tkbm_ptd, 1, hfcUnit('q-tkbm-ptd-amt', byCode.tkbm_ptd));
     }
-    const checked = [...document.querySelectorAll('.q-extra-chk:checked')].map(e => Number(e.value));
-    for (const j of hfcJasa.filter(j => j.category === type && !j.code && checked.includes(j.id))) add(j, 1);
+    for (const chk of document.querySelectorAll('.q-extra-chk:checked')) {
+        const j = hfcJasa.find(x => Number(x.id) === Number(chk.value));
+        const amtEl = document.querySelector(`.q-extra-amt[data-id="${chk.value}"]`);
+        const unit = !amtEl || amtEl.value === '' ? Number(j && j.amount) || 0 : Number(amtEl.value);
+        add(j, 1, unit);
+    }
     return { lines, total: lines.reduce((s, l) => s + l.subtotal, 0) };
 }
 
@@ -583,9 +622,22 @@ async function submitFixCost() {
     const svc = hfcService();
     const tkbmDtp = document.getElementById('q-tkbm-dtp-who').value;
     const tkbmPtd = document.getElementById('q-tkbm-ptd-who').value;
-    if (type === 'sea' && svc === 'door_to_port' && !tkbmDtp) { App.showToast('Pilih siapa yang menanggung TKBM Door to Port', 'warning'); return; }
-    if (type === 'sea' && svc === 'port_to_door' && !tkbmPtd) { App.showToast('Pilih siapa yang menanggung TKBM Port to Door', 'warning'); return; }
     const pts = (chk, id) => document.getElementById(chk).checked ? Math.max(1, parseInt(document.getElementById(id).value, 10) || 1) : 0;
+    
+    // Semua jasa opsional. Nominal per satuan dikirim hanya untuk jasa yang dipilih (kosong = pakai Master Jasa)
+    const amountOf = (id) => { const v = document.getElementById(id).value; return v === '' ? undefined : Number(v); };
+    const jasaAmounts = {};
+    if (document.getElementById('q-multipickup').checked) jasaAmounts.multipickup = amountOf('q-multipickup-amt');
+    if (document.getElementById('q-multidrop').checked) jasaAmounts.multidrop = amountOf('q-multidrop-amt');
+    if (document.getElementById('q-kawalan').checked) jasaAmounts.kawalan = amountOf('q-kawalan-amt');
+    if (type === 'sea' && svc === 'door_to_port' && tkbmDtp === 'perusahaan') jasaAmounts.tkbm_dtp = amountOf('q-tkbm-dtp-amt');
+    if (type === 'sea' && svc === 'port_to_door' && tkbmPtd === 'perusahaan') jasaAmounts.tkbm_ptd = amountOf('q-tkbm-ptd-amt');
+    const extraJasa = [...document.querySelectorAll('.q-extra-chk:checked')].map(c => {
+        const a = document.querySelector(`.q-extra-amt[data-id="${c.value}"]`);
+        return { id: Number(c.value), amount: a && a.value !== '' ? Number(a.value) : undefined };
+    });
+    const badAmount = [...Object.values(jasaAmounts), ...extraJasa.map(e => e.amount)].some(v => v !== undefined && (!Number.isFinite(v) || v < 0));
+    if (badAmount) { App.showToast('Nominal jasa harus berupa angka 0 atau lebih', 'warning'); return; }
     
     // Bentuk kiriman mengikuti POST /fix-cost/create
     const payload = {
@@ -614,7 +666,8 @@ async function submitFixCost() {
         kawalan: document.getElementById('q-kawalan').checked ? 1 : 0,
         tkbm_dtp: type === 'sea' && svc === 'door_to_port' ? tkbmDtp : null,
         tkbm_ptd: type === 'sea' && svc === 'port_to_door' ? tkbmPtd : null,
-        extra_jasa_ids: [...document.querySelectorAll('.q-extra-chk:checked')].map(e => Number(e.value))
+        jasa_amounts: jasaAmounts,
+        extra_jasa: extraJasa
     };
     
     const btn = document.getElementById('btn-submit-fix-cost');

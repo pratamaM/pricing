@@ -66,21 +66,42 @@ router.post('/create', (req, res) => {
             if (!['customer', 'perusahaan'].includes(v)) throw Object.assign(new Error(`${label} harus customer atau perusahaan`), { status: 400 });
             return v;
         };
-        const tkbmDtp = transport_type === 'sea' ? payer(req.body.tkbm_dtp, 'TKBM Door to Port', serviceType === 'door_to_port') : null;
-        const tkbmPtd = transport_type === 'sea' ? payer(req.body.tkbm_ptd, 'TKBM Port to Door', serviceType === 'port_to_door') : null;
+        const tkbmDtp = transport_type === 'sea' ? payer(req.body.tkbm_dtp, 'TKBM Door to Port', false) : null;
+        const tkbmPtd = transport_type === 'sea' ? payer(req.body.tkbm_ptd, 'TKBM Port to Door', false) : null;
 
-        // Nominal biaya tambahan SELALU dihitung ulang dari Master Jasa (nilai dari browser tidak dipercaya)
+        // Semua jasa OPSIONAL. Master Jasa = nominal bawaan; tiap pengiriman boleh memakai nominal lain
+        // (jasa_amounts: nominal per satuan untuk jasa bawaan, extra_jasa: [{id, amount}] untuk jasa tambahan).
+        // Jasa yang dipakai harus ada di Master Jasa; nominal wajib angka >= 0.
         const jasaRows = queryAll('SELECT id, code, name, amount FROM master_jasa WHERE category = ?', [transport_type]);
         const byCode = Object.fromEntries(jasaRows.filter(j => j.code).map(j => [j.code, j]));
+        const ov = (req.body.jasa_amounts && typeof req.body.jasa_amounts === 'object') ? req.body.jasa_amounts : {};
+        const unitAmount = (j, raw, label) => {
+            if (raw === undefined || raw === null || raw === '') return Number(j.amount) || 0;
+            const n = Number(raw);
+            if (!Number.isFinite(n) || n < 0) throw Object.assign(new Error(`Nominal ${label} harus berupa angka >= 0`), { status: 400 });
+            return n;
+        };
         const detail = [];
-        const addLine = (j, qty, label) => { if (j && qty > 0) detail.push({ name: label || j.name, qty, amount: Number(j.amount) || 0, subtotal: (Number(j.amount) || 0) * qty }); };
-        addLine(byCode.multipickup, mpPoints);
-        addLine(byCode.multidrop, mdPoints);
-        addLine(byCode.kawalan, kawalan);
-        if (tkbmDtp === 'perusahaan') addLine(byCode.tkbm_dtp, 1);
-        if (tkbmPtd === 'perusahaan') addLine(byCode.tkbm_ptd, 1);
-        const extraIds = Array.isArray(req.body.extra_jasa_ids) ? req.body.extra_jasa_ids.map(Number) : [];
-        for (const j of jasaRows.filter(j => !j.code && extraIds.includes(j.id))) addLine(j, 1);
+        const addLine = (j, qty, raw, label) => {
+            if (!j || qty <= 0) return;
+            const amount = unitAmount(j, raw, label || j.name);
+            detail.push({ name: j.name, qty, amount, subtotal: amount * qty });
+        };
+        addLine(byCode.multipickup, mpPoints, ov.multipickup);
+        addLine(byCode.multidrop, mdPoints, ov.multidrop);
+        addLine(byCode.kawalan, kawalan, ov.kawalan);
+        if (tkbmDtp === 'perusahaan') addLine(byCode.tkbm_dtp, 1, ov.tkbm_dtp);
+        if (tkbmPtd === 'perusahaan') addLine(byCode.tkbm_ptd, 1, ov.tkbm_ptd);
+        const extraReq = [];
+        if (Array.isArray(req.body.extra_jasa)) for (const e of req.body.extra_jasa) if (e && typeof e === 'object') extraReq.push({ id: Number(e.id), amount: e.amount });
+        if (Array.isArray(req.body.extra_jasa_ids)) for (const id of req.body.extra_jasa_ids) extraReq.push({ id: Number(id), amount: undefined });
+        const seen = new Set();
+        for (const e of extraReq) {
+            const j = jasaRows.find(x => !x.code && x.id === e.id);
+            if (!j || seen.has(j.id)) continue;
+            seen.add(j.id);
+            addLine(j, 1, e.amount);
+        }
         const additionalCost = detail.reduce((s, d) => s + d.subtotal, 0);
         const totalCost = (Number(fix_cost) + additionalCost) * truckCount;
         const gudangClean = (v) => { const s = (v === undefined || v === null) ? '' : String(v).trim(); return s ? s.slice(0, 100) : null; };
