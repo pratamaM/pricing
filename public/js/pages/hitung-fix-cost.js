@@ -117,7 +117,7 @@ function renderHitungFixCost() {
                 <!-- Pertanyaan biaya tambahan -->
                 <div class="md:col-span-3 mt-2 pt-4 border-t border-gray-100">
                     <h4 class="font-medium text-gray-800 mb-3">Biaya Tambahan</h4>
-                    <p class="text-xs text-gray-500 mb-3">Semua jasa bersifat opsional. Nominal terisi otomatis dari Master Jasa, tetapi bisa diubah sesuai pengiriman ini.</p>
+                    <p class="text-xs text-gray-500 mb-3">Semua jasa bersifat opsional. Centang jasa yang dipakai lalu isi nominalnya sesuai pengiriman ini (harga jasa bisa berbeda tiap pengiriman).</p>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                         <div>
                             <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="q-multipickup" class="w-4 h-4 text-blue-600"> <span class="text-sm font-medium text-gray-700">Multi Pickup</span></label>
@@ -142,9 +142,10 @@ function renderHitungFixCost() {
                             <div id="q-tkbm-ptd-n" class="hidden mt-2"><input type="number" id="q-tkbm-ptd-amt" min="0" step="any" placeholder="Rp" class="w-36 border-gray-300 rounded-lg p-2 border text-sm focus:ring-2 focus:ring-blue-500 outline-none"></div>
                         </div>
                     </div>
-                    <div id="q-extra" class="hidden mt-4">
+                    <div id="q-extra" class="mt-4">
                         <p class="text-sm font-medium text-gray-700 mb-2">Jasa lainnya (opsional)</p>
                         <div id="q-extra-list" class="space-y-2"></div>
+                        <button type="button" id="q-extra-add" class="mt-2 text-sm text-blue-600 hover:text-blue-800 font-medium">+ Tambah jasa lain</button>
                     </div>
                 </div>
             </div>
@@ -244,44 +245,18 @@ async function renderHitungFixCostInit() {
         el.addEventListener('change', hfcUpdateSummary);
     });
     
-    // Master Jasa & Master Kendaraan (untuk biaya tambahan dan saran type container)
+    // Master Kendaraan -> saran Type Container
     try {
-        hfcJasa = await App.api('/master-jasa');
         const veh = await App.api('/master-kendaraan?category=sea');
         document.getElementById('container-list').innerHTML = veh.map(v => `<option value="${App.esc(v.name)}">`).join('');
-    } catch (e) {
-        App.showToast('Gagal memuat Master Jasa / Kendaraan', 'warning');
-    }
-
-    // Setup cascading
-    setupCascading('orig');
-    setupCascading('dest');
+    } catch (e) { /* hanya saran, boleh diketik bebas */ }
     
-    document.getElementById('btn-cek-biaya').addEventListener('click', cekBiaya);
-    
-    // Calculate logic
-    const inputP = document.getElementById('disc-percent');
-    const inputR = document.getElementById('disc-rp');
-    
-    inputP.addEventListener('input', () => {
-        if(inputP.value) inputR.value = '';
-        calculateFixCost();
-    });
-    
-    inputR.addEventListener('input', () => {
-        if(inputR.value) inputP.value = '';
-        calculateFixCost();
-    });
-    
-    document.getElementById('tariff-select').addEventListener('change', (e) => hfcSelectTariff(Number(e.target.value)));
-    document.getElementById('btn-submit-fix-cost').addEventListener('click', submitFixCost);
+    document.getElementById('q-extra-add').addEventListener('click', hfcAddExtraRow);
     
     // Initial load
     hfcApplyTypeUi();
     loadLocations('land');
 }
-
-let hfcJasa = [];
 
 function hfcType() {
     return document.querySelector('input[name="hfc_type"]:checked').value;
@@ -298,11 +273,14 @@ function hfcApplyTypeUi() {
     document.getElementById('hfc-service').classList.toggle('hidden', !sea);
 }
 
-// Pertanyaan yang tampil mengikuti jenis layanan. Semua jasa opsional; nominal bawaan dari Master Jasa (bisa diubah)
-function hfcDefaultAmount(type, code) {
-    const j = hfcJasa.find(x => x.category === type && x.code === code);
-    return j && Number(j.amount) > 0 ? Number(j.amount) : '';
-}
+// Pertanyaan yang tampil mengikuti jenis layanan. Semua jasa opsional; nominal diisi manual per pengiriman
+const HFC_JASA = {
+    multipickup: 'Multi Pickup (per titik)',
+    multidrop: 'Multi Drop (per titik)',
+    kawalan: 'Kawalan',
+    tkbm_dtp: 'TKBM Door to Port',
+    tkbm_ptd: 'TKBM Port to Door'
+};
 
 function hfcRefreshQuestions() {
     const type = hfcType(), svc = hfcService();
@@ -314,61 +292,49 @@ function hfcRefreshQuestions() {
     for (const id of ['q-multipickup-n', 'q-multidrop-n', 'q-kawalan-n', 'q-tkbm-dtp-n', 'q-tkbm-ptd-n']) document.getElementById(id).classList.add('hidden');
     document.getElementById('q-multipickup-points').value = 1;
     document.getElementById('q-multidrop-points').value = 1;
-    document.getElementById('q-multipickup-amt').value = hfcDefaultAmount(type, 'multipickup');
-    document.getElementById('q-multidrop-amt').value = hfcDefaultAmount(type, 'multidrop');
-    document.getElementById('q-kawalan-amt').value = hfcDefaultAmount(type, 'kawalan');
-    document.getElementById('q-tkbm-dtp-amt').value = hfcDefaultAmount(type, 'tkbm_dtp');
-    document.getElementById('q-tkbm-ptd-amt').value = hfcDefaultAmount(type, 'tkbm_ptd');
+    for (const id of ['q-multipickup-amt', 'q-multidrop-amt', 'q-kawalan-amt', 'q-tkbm-dtp-amt', 'q-tkbm-ptd-amt']) document.getElementById(id).value = '';
     document.getElementById('q-tkbm-dtp-who').value = '';
     document.getElementById('q-tkbm-ptd-who').value = '';
     document.getElementById('truck-count').value = 1;
     document.getElementById('takedown').value = 0;
-
-    const extras = hfcJasa.filter(j => j.category === type && !j.code);
-    document.getElementById('q-extra').classList.toggle('hidden', extras.length === 0);
-    document.getElementById('q-extra-list').innerHTML = extras.map(j => `
-        <div class="flex flex-wrap items-center gap-2 text-sm text-gray-700">
-            <label class="flex items-center gap-2 cursor-pointer min-w-[12rem]">
-                <input type="checkbox" class="q-extra-chk w-4 h-4 text-blue-600" value="${Number(j.id)}">
-                <span>${App.esc(j.name)}</span>
-            </label>
-            <input type="number" min="0" step="any" placeholder="Rp" value="${Number(j.amount) > 0 ? Number(j.amount) : ''}" data-id="${Number(j.id)}" class="q-extra-amt hidden w-36 border-gray-300 rounded-lg p-2 border text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-        </div>`).join('');
-    document.querySelectorAll('.q-extra-chk').forEach(el => el.addEventListener('change', () => {
-        const amtEl = document.querySelector(`.q-extra-amt[data-id="${el.value}"]`);
-        if (amtEl) amtEl.classList.toggle('hidden', !el.checked);
-        hfcUpdateSummary();
-    }));
-    document.querySelectorAll('.q-extra-amt').forEach(el => el.addEventListener('input', hfcUpdateSummary));
+    document.getElementById('q-extra-list').innerHTML = '';
 }
 
-// Nominal per satuan: isian pengguna bila ada, kalau kosong pakai nominal Master Jasa
-function hfcUnit(id, master) {
-    const v = document.getElementById(id).value;
-    if (v === '') return Number(master && master.amount) || 0;
-    return Number(v);
+// Jasa lainnya: nama dan nominal bebas
+function hfcAddExtraRow() {
+    const list = document.getElementById('q-extra-list');
+    if (list.children.length >= 20) { App.showToast('Maksimal 20 jasa lainnya', 'warning'); return; }
+    const row = document.createElement('div');
+    row.className = 'q-extra-row flex flex-wrap items-center gap-2';
+    row.innerHTML = `
+        <input type="text" maxlength="100" placeholder="Nama jasa" class="q-extra-name w-56 border-gray-300 rounded-lg p-2 border text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+        <input type="number" min="0" step="any" placeholder="Rp" class="q-extra-amt w-36 border-gray-300 rounded-lg p-2 border text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+        <button type="button" class="q-extra-del text-red-600 hover:bg-red-50 p-1.5 rounded transition" title="Hapus"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
+    row.querySelector('.q-extra-amt').addEventListener('input', hfcUpdateSummary);
+    row.querySelector('.q-extra-del').addEventListener('click', () => { row.remove(); hfcUpdateSummary(); });
+    list.appendChild(row);
+    lucide.createIcons();
 }
 
-// Hitung biaya tambahan per truk dari jawaban (server menghitung ulang saat disimpan)
+// Hitung biaya tambahan per truk dari isian (server memvalidasi dan menghitung ulang saat disimpan)
 function hfcAdditional() {
     const type = hfcType();
-    const byCode = Object.fromEntries(hfcJasa.filter(j => j.category === type && j.code).map(j => [j.code, j]));
     const lines = [];
-    const add = (j, qty, unit) => { if (j && qty > 0 && Number.isFinite(unit) && unit >= 0) lines.push({ name: j.name, subtotal: unit * qty }); };
+    const num = (id) => { const v = document.getElementById(id).value; return v === '' ? 0 : Number(v); };
+    const add = (name, qty, unit) => { if (qty > 0 && Number.isFinite(unit) && unit >= 0) lines.push({ name, subtotal: unit * qty }); };
     const pts = (id) => Math.max(0, parseInt(document.getElementById(id).value, 10) || 0);
-    if (document.getElementById('q-multipickup').checked) add(byCode.multipickup, pts('q-multipickup-points'), hfcUnit('q-multipickup-amt', byCode.multipickup));
-    if (document.getElementById('q-multidrop').checked) add(byCode.multidrop, pts('q-multidrop-points'), hfcUnit('q-multidrop-amt', byCode.multidrop));
-    if (document.getElementById('q-kawalan').checked) add(byCode.kawalan, 1, hfcUnit('q-kawalan-amt', byCode.kawalan));
+    if (document.getElementById('q-multipickup').checked) add(HFC_JASA.multipickup, pts('q-multipickup-points'), num('q-multipickup-amt'));
+    if (document.getElementById('q-multidrop').checked) add(HFC_JASA.multidrop, pts('q-multidrop-points'), num('q-multidrop-amt'));
+    if (document.getElementById('q-kawalan').checked) add(HFC_JASA.kawalan, 1, num('q-kawalan-amt'));
     if (type === 'sea') {
-        if (document.getElementById('q-tkbm-dtp-who').value === 'perusahaan') add(byCode.tkbm_dtp, 1, hfcUnit('q-tkbm-dtp-amt', byCode.tkbm_dtp));
-        if (document.getElementById('q-tkbm-ptd-who').value === 'perusahaan') add(byCode.tkbm_ptd, 1, hfcUnit('q-tkbm-ptd-amt', byCode.tkbm_ptd));
+        if (document.getElementById('q-tkbm-dtp-who').value === 'perusahaan') add(HFC_JASA.tkbm_dtp, 1, num('q-tkbm-dtp-amt'));
+        if (document.getElementById('q-tkbm-ptd-who').value === 'perusahaan') add(HFC_JASA.tkbm_ptd, 1, num('q-tkbm-ptd-amt'));
     }
-    for (const chk of document.querySelectorAll('.q-extra-chk:checked')) {
-        const j = hfcJasa.find(x => Number(x.id) === Number(chk.value));
-        const amtEl = document.querySelector(`.q-extra-amt[data-id="${chk.value}"]`);
-        const unit = !amtEl || amtEl.value === '' ? Number(j && j.amount) || 0 : Number(amtEl.value);
-        add(j, 1, unit);
-    }
+    document.querySelectorAll('.q-extra-row').forEach(r => {
+        const name = r.querySelector('.q-extra-name').value.trim() || 'Jasa lainnya';
+        const v = r.querySelector('.q-extra-amt').value;
+        add(name, 1, v === '' ? 0 : Number(v));
+    });
     return { lines, total: lines.reduce((s, l) => s + l.subtotal, 0) };
 }
 
@@ -624,20 +590,28 @@ async function submitFixCost() {
     const tkbmPtd = document.getElementById('q-tkbm-ptd-who').value;
     const pts = (chk, id) => document.getElementById(chk).checked ? Math.max(1, parseInt(document.getElementById(id).value, 10) || 1) : 0;
     
-    // Semua jasa opsional. Nominal per satuan dikirim hanya untuk jasa yang dipilih (kosong = pakai Master Jasa)
-    const amountOf = (id) => { const v = document.getElementById(id).value; return v === '' ? undefined : Number(v); };
+    // Semua jasa opsional. Nominal wajib diisi untuk jasa yang dipilih.
     const jasaAmounts = {};
-    if (document.getElementById('q-multipickup').checked) jasaAmounts.multipickup = amountOf('q-multipickup-amt');
-    if (document.getElementById('q-multidrop').checked) jasaAmounts.multidrop = amountOf('q-multidrop-amt');
-    if (document.getElementById('q-kawalan').checked) jasaAmounts.kawalan = amountOf('q-kawalan-amt');
-    if (type === 'sea' && svc === 'door_to_port' && tkbmDtp === 'perusahaan') jasaAmounts.tkbm_dtp = amountOf('q-tkbm-dtp-amt');
-    if (type === 'sea' && svc === 'port_to_door' && tkbmPtd === 'perusahaan') jasaAmounts.tkbm_ptd = amountOf('q-tkbm-ptd-amt');
-    const extraJasa = [...document.querySelectorAll('.q-extra-chk:checked')].map(c => {
-        const a = document.querySelector(`.q-extra-amt[data-id="${c.value}"]`);
-        return { id: Number(c.value), amount: a && a.value !== '' ? Number(a.value) : undefined };
+    const need = [];
+    const take = (key, on, id) => {
+        if (!on) return;
+        const v = document.getElementById(id).value;
+        if (v === '' || !Number.isFinite(Number(v)) || Number(v) < 0) need.push(HFC_JASA[key]); else jasaAmounts[key] = Number(v);
+    };
+    take('multipickup', document.getElementById('q-multipickup').checked, 'q-multipickup-amt');
+    take('multidrop', document.getElementById('q-multidrop').checked, 'q-multidrop-amt');
+    take('kawalan', document.getElementById('q-kawalan').checked, 'q-kawalan-amt');
+    take('tkbm_dtp', type === 'sea' && svc === 'door_to_port' && tkbmDtp === 'perusahaan', 'q-tkbm-dtp-amt');
+    take('tkbm_ptd', type === 'sea' && svc === 'port_to_door' && tkbmPtd === 'perusahaan', 'q-tkbm-ptd-amt');
+    const extraJasa = [];
+    document.querySelectorAll('.q-extra-row').forEach(r => {
+        const name = r.querySelector('.q-extra-name').value.trim();
+        const v = r.querySelector('.q-extra-amt').value;
+        if (!name && v === '') return; // baris kosong diabaikan
+        if (!name || v === '' || !Number.isFinite(Number(v)) || Number(v) < 0) need.push(name || 'Jasa lainnya (nama/nominal belum lengkap)');
+        else extraJasa.push({ name, amount: Number(v) });
     });
-    const badAmount = [...Object.values(jasaAmounts), ...extraJasa.map(e => e.amount)].some(v => v !== undefined && (!Number.isFinite(v) || v < 0));
-    if (badAmount) { App.showToast('Nominal jasa harus berupa angka 0 atau lebih', 'warning'); return; }
+    if (need.length) { App.showToast('Isi nominal (angka 0 atau lebih) untuk: ' + need.join(', '), 'warning'); return; }
     
     // Bentuk kiriman mengikuti POST /fix-cost/create
     const payload = {

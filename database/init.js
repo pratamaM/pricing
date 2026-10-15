@@ -161,16 +161,8 @@ async function initDb() {
     ensureColumn('master_biaya_sea', 'gudang_bongkar', 'TEXT');
     if (!hadSeaService) console.log("Catatan: baris Master Biaya Sea lama diberi service_type 'door_to_port'; koreksi lewat Master Biaya > Edit bila perlu.");
 
-    // Master Jasa (darat & laut) dan Master Kendaraan
+    // Master Kendaraan (jasa tambahan tidak punya master: nominalnya diisi langsung saat Hitung Fix Cost)
     db.run(`
-        CREATE TABLE IF NOT EXISTS master_jasa (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            category TEXT NOT NULL CHECK(category IN ('land', 'sea')),
-            code TEXT,
-            name TEXT NOT NULL,
-            amount REAL DEFAULT 0,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        );
         CREATE TABLE IF NOT EXISTS master_kendaraan (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             category TEXT NOT NULL CHECK(category IN ('land', 'sea')),
@@ -178,15 +170,6 @@ async function initDb() {
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
     `);
-    if (db.exec('SELECT COUNT(*) FROM master_jasa')[0].values[0][0] === 0) {
-        // code = jasa tambahan yang ditanyakan saat kalkulasi; nominal diisi lewat Master Jasa
-        const jasa = [
-            ['land', 'multipickup', 'Multi Pickup (per titik tambahan)'], ['land', 'multidrop', 'Multi Drop (per titik tambahan)'], ['land', 'kawalan', 'Kawalan'],
-            ['sea', 'multipickup', 'Multi Pickup (per titik tambahan)'], ['sea', 'multidrop', 'Multi Drop (per titik tambahan)'], ['sea', 'kawalan', 'Kawalan'],
-            ['sea', 'tkbm_dtp', 'TKBM Door to Port'], ['sea', 'tkbm_ptd', 'TKBM Port to Door']
-        ];
-        for (const j of jasa) db.run('INSERT INTO master_jasa (category, code, name, amount) VALUES (?, ?, ?, 0)', j);
-    }
     if (db.exec('SELECT COUNT(*) FROM master_kendaraan')[0].values[0][0] === 0) {
         for (const k of [['land', '20 Feet'], ['land', '40 Feet'], ['land', 'Wingbox'], ['sea', '20 Feet'], ['sea', '40 Feet']]) {
             db.run('INSERT INTO master_kendaraan (category, name) VALUES (?, ?)', k);

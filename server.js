@@ -45,7 +45,6 @@ async function startServer() {
     app.use('/api/auth', require('./routes/auth'));
     app.use('/api/users', require('./routes/users'));
     app.use('/api/master-biaya', require('./routes/master-biaya'));
-    app.use('/api/master-jasa', require('./routes/master-jasa'));
     app.use('/api/master-kendaraan', require('./routes/master-kendaraan'));
     app.use('/api/fix-cost', require('./routes/fix-cost'));
     app.use('/api/dashboard', require('./routes/dashboard'));
