@@ -245,6 +245,29 @@ async function renderHitungFixCostInit() {
         el.addEventListener('change', hfcUpdateSummary);
     });
     
+    // Setup cascading
+    setupCascading('orig');
+    setupCascading('dest');
+    
+    document.getElementById('btn-cek-biaya').addEventListener('click', cekBiaya);
+    
+    // Calculate logic
+    const inputP = document.getElementById('disc-percent');
+    const inputR = document.getElementById('disc-rp');
+    
+    inputP.addEventListener('input', () => {
+        if(inputP.value) inputR.value = '';
+        calculateFixCost();
+    });
+    
+    inputR.addEventListener('input', () => {
+        if(inputR.value) inputP.value = '';
+        calculateFixCost();
+    });
+    
+    document.getElementById('tariff-select').addEventListener('change', (e) => hfcSelectTariff(Number(e.target.value)));
+    document.getElementById('btn-submit-fix-cost').addEventListener('click', submitFixCost);
+    
     // Master Kendaraan -> saran Type Container
     try {
         const veh = await App.api('/master-kendaraan?category=sea');
