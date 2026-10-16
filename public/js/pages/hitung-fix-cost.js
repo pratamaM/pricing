@@ -190,9 +190,10 @@ function renderHitungFixCost() {
                         <p id="sum-formula" class="text-xs text-gray-500 pt-2 border-t border-gray-200"></p>
                     </div>
                     
-                    <div class="bg-blue-50 p-6 rounded-lg border border-blue-200 flex flex-col justify-center items-center">
-                        <p class="text-sm font-medium text-blue-600 mb-2">Total Biaya</p>
-                        <p id="sum-total" class="text-4xl font-bold text-blue-700 text-center">Rp 0</p>
+                    <div class="bg-blue-600 text-white px-6 py-8 rounded-xl shadow-lg text-center">
+                        <p class="text-sm font-semibold tracking-widest uppercase text-blue-100">Total Biaya</p>
+                        <p id="sum-total" class="text-5xl md:text-6xl font-extrabold my-3 break-words leading-tight">Rp 0</p>
+                        <p id="sum-total-note" class="text-sm text-blue-100"></p>
                     </div>
                 </div>
             </div>
@@ -415,6 +416,13 @@ function hfcUpdateSummary() {
     
     document.getElementById('sum-trucks').textContent = trucks;
     document.getElementById('sum-total').textContent = rp(perTruck * trucks);
+    // Keterangan di bawah angka total: untuk berapa truk dan komponen apa saja yang sudah termasuk
+    const incl = [];
+    if (hasDisc) incl.push(disc.label.toLowerCase());
+    if (hasAdd) incl.push('biaya tambahan');
+    document.getElementById('sum-total-note').textContent =
+        `untuk ${trucks} truk` + (trucks > 1 ? ` (${rp(perTruck)} per truk)` : '') +
+        (incl.length ? ` \u2022 sudah termasuk ${incl.join(' dan ')}` : ' \u2022 tanpa diskon dan biaya tambahan');
     
     // Penjelasan rumus sesuai komponen yang dipakai
     let words = 'Fix Cost per truk', nums = rp(hfcOriginalCost);
