@@ -109,10 +109,6 @@ function renderHitungFixCost() {
                     <label class="block text-sm font-medium text-gray-700 mb-1">Jumlah Truk <span class="text-red-500">*</span></label>
                     <input type="number" id="truck-count" min="1" step="1" value="1" class="w-full border-gray-300 rounded-lg p-2.5 border focus:ring-2 focus:ring-blue-500 outline-none">
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Durasi Takedown (hari)</label>
-                    <input type="number" id="takedown" min="0" step="any" value="0" class="w-full border-gray-300 rounded-lg p-2.5 border focus:ring-2 focus:ring-blue-500 outline-none">
-                </div>
 
                 <!-- Pertanyaan biaya tambahan -->
                 <div class="md:col-span-3 mt-2 pt-4 border-t border-gray-100">
@@ -151,48 +147,52 @@ function renderHitungFixCost() {
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div class="space-y-6">
-                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                        <p class="text-sm text-gray-500 mb-1">Original Cost</p>
-                        <p id="calc-original-cost" class="text-2xl font-bold text-gray-800">Rp 0</p>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Diskon</label>
+                        <div class="flex flex-wrap gap-x-6 gap-y-2">
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="disc_mode" value="none" checked class="w-4 h-4 text-blue-600"> <span class="text-sm text-gray-700">Tanpa diskon</span></label>
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="disc_mode" value="percent" class="w-4 h-4 text-blue-600"> <span class="text-sm text-gray-700">Persentase (%)</span></label>
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="disc_mode" value="amount" class="w-4 h-4 text-blue-600"> <span class="text-sm text-gray-700">Nominal (Rp)</span></label>
+                        </div>
                     </div>
                     
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Discount Percentage (%)</label>
+                    <div id="disc-percent-wrap" class="hidden">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Diskon Persentase</label>
                         <div class="relative">
-                            <input type="number" id="disc-percent" min="0" max="100" step="0.01" class="w-full border-gray-300 rounded-lg p-2.5 border focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. 10">
+                            <input type="number" id="disc-percent" min="0" max="100" step="0.01" class="w-full border-gray-300 rounded-lg p-2.5 border focus:ring-2 focus:ring-blue-500 outline-none" placeholder="mis. 10">
                             <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-500">%</div>
                         </div>
                     </div>
                     
-                    <div class="text-center text-sm text-gray-400">OR</div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Discount Amount (Rp)</label>
+                    <div id="disc-rp-wrap" class="hidden">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Diskon Nominal</label>
                         <div class="relative">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">Rp</div>
-                            <input type="number" id="disc-rp" min="0" class="w-full pl-10 border-gray-300 rounded-lg p-2.5 border focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. 500000">
+                            <input type="number" id="disc-rp" min="0" class="w-full pl-10 border-gray-300 rounded-lg p-2.5 border focus:ring-2 focus:ring-blue-500 outline-none" placeholder="mis. 500000">
                         </div>
-                    </div>
-                </div>
-                
-                <div class="space-y-6 flex flex-col">
-                    <div class="bg-blue-50 p-6 rounded-lg border border-blue-200 flex-1 flex flex-col justify-center items-center">
-                        <p class="text-sm font-medium text-blue-600 mb-2">Calculated Fix Cost</p>
-                        <p id="calc-fix-cost" class="text-4xl font-bold text-blue-700 text-center">Rp 0</p>
-                    </div>
-
-                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 text-sm space-y-1">
-                        <div class="flex justify-between"><span class="text-gray-600">Fix Cost per truk</span><span id="sum-fix">Rp 0</span></div>
-                        <div class="flex justify-between"><span class="text-gray-600">Biaya tambahan per truk</span><span id="sum-add">Rp 0</span></div>
-                        <div class="flex justify-between"><span class="text-gray-600">Jumlah truk</span><span id="sum-trucks">1</span></div>
-                        <div class="flex justify-between pt-2 border-t border-gray-200 font-semibold text-gray-800"><span>Total Biaya</span><span id="sum-total">Rp 0</span></div>
-                        <div id="sum-detail" class="text-xs text-gray-500 pt-1"></div>
                     </div>
                     
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                        <textarea id="hfc-notes" rows="3" class="w-full border-gray-300 rounded-lg p-2.5 border focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Reason for discount..."></textarea>
+                        <textarea id="hfc-notes" rows="3" class="w-full border-gray-300 rounded-lg p-2.5 border focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Catatan, mis. alasan diskon..."></textarea>
+                    </div>
+                </div>
+                
+                <div class="space-y-4">
+                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 text-sm space-y-1.5">
+                        <p class="font-medium text-gray-800 mb-2">Rincian Perhitungan</p>
+                        <div class="flex justify-between"><span class="text-gray-600">Fix Cost per truk</span><span id="sum-fix" class="font-medium">Rp 0</span></div>
+                        <div id="row-disc" class="hidden flex justify-between text-red-600"><span id="sum-disc-label">Diskon</span><span id="sum-disc">- Rp 0</span></div>
+                        <div id="row-after" class="hidden flex justify-between"><span class="text-gray-600">Fix Cost per truk setelah diskon</span><span id="sum-after">Rp 0</span></div>
+                        <div id="row-add" class="hidden"><div class="flex justify-between"><span class="text-gray-600">Biaya tambahan per truk</span><span id="sum-add">Rp 0</span></div><div id="sum-detail" class="text-xs text-gray-500 mt-0.5"></div></div>
+                        <div class="flex justify-between"><span class="text-gray-600">Jumlah truk</span><span id="sum-trucks">1</span></div>
+                        <p id="sum-formula" class="text-xs text-gray-500 pt-2 border-t border-gray-200"></p>
+                    </div>
+                    
+                    <div class="bg-blue-50 p-6 rounded-lg border border-blue-200 flex flex-col justify-center items-center">
+                        <p class="text-sm font-medium text-blue-600 mb-2">Total Biaya</p>
+                        <p id="sum-total" class="text-4xl font-bold text-blue-700 text-center">Rp 0</p>
                     </div>
                 </div>
             </div>
@@ -251,19 +251,12 @@ async function renderHitungFixCostInit() {
     
     document.getElementById('btn-cek-biaya').addEventListener('click', cekBiaya);
     
-    // Calculate logic
-    const inputP = document.getElementById('disc-percent');
-    const inputR = document.getElementById('disc-rp');
-    
-    inputP.addEventListener('input', () => {
-        if(inputP.value) inputR.value = '';
-        calculateFixCost();
+    // Diskon: pilih dulu persentase atau nominal, baru isi nilainya
+    document.querySelectorAll('input[name="disc_mode"]').forEach(el => {
+        el.addEventListener('change', () => { hfcApplyDiscountMode(); hfcUpdateSummary(); });
     });
-    
-    inputR.addEventListener('input', () => {
-        if(inputR.value) inputP.value = '';
-        calculateFixCost();
-    });
+    document.getElementById('disc-percent').addEventListener('input', hfcUpdateSummary);
+    document.getElementById('disc-rp').addEventListener('input', hfcUpdateSummary);
     
     document.getElementById('tariff-select').addEventListener('change', (e) => hfcSelectTariff(Number(e.target.value)));
     document.getElementById('btn-submit-fix-cost').addEventListener('click', submitFixCost);
@@ -319,7 +312,6 @@ function hfcRefreshQuestions() {
     document.getElementById('q-tkbm-dtp-who').value = '';
     document.getElementById('q-tkbm-ptd-who').value = '';
     document.getElementById('truck-count').value = 1;
-    document.getElementById('takedown').value = 0;
     document.getElementById('q-extra-list').innerHTML = '';
 }
 
@@ -361,24 +353,78 @@ function hfcAdditional() {
     return { lines, total: lines.reduce((s, l) => s + l.subtotal, 0) };
 }
 
-function hfcCurrentFix() {
-    let fix = hfcOriginalCost;
-    const p = parseFloat(document.getElementById('disc-percent').value);
-    const r = parseFloat(document.getElementById('disc-rp').value);
-    if (!isNaN(p) && p > 0) fix = hfcOriginalCost - (hfcOriginalCost * (p / 100));
-    else if (!isNaN(r) && r > 0) fix = hfcOriginalCost - r;
-    return Math.max(0, fix);
+// ---- Diskon ----
+function hfcDiscountMode() {
+    const r = document.querySelector('input[name="disc_mode"]:checked');
+    return r ? r.value : 'none';
 }
 
+function hfcApplyDiscountMode() {
+    const mode = hfcDiscountMode();
+    document.getElementById('disc-percent-wrap').classList.toggle('hidden', mode !== 'percent');
+    document.getElementById('disc-rp-wrap').classList.toggle('hidden', mode !== 'amount');
+    if (mode !== 'percent') document.getElementById('disc-percent').value = '';
+    if (mode !== 'amount') document.getElementById('disc-rp').value = '';
+}
+
+function hfcResetDiscount() {
+    const none = document.querySelector('input[name="disc_mode"][value="none"]');
+    if (none) none.checked = true;
+    hfcApplyDiscountMode();
+}
+
+// Nilai diskon per truk dalam rupiah (tidak pernah melebihi Fix Cost)
+function hfcDiscount() {
+    const mode = hfcDiscountMode();
+    if (mode === 'percent') {
+        const p = parseFloat(document.getElementById('disc-percent').value);
+        if (!isNaN(p) && p > 0) { const pp = Math.min(p, 100); return { amount: hfcOriginalCost * pp / 100, label: `Diskon ${pp}%` }; }
+    } else if (mode === 'amount') {
+        const r = parseFloat(document.getElementById('disc-rp').value);
+        if (!isNaN(r) && r > 0) return { amount: Math.min(r, hfcOriginalCost), label: 'Diskon nominal' };
+    }
+    return { amount: 0, label: '' };
+}
+
+function hfcCurrentFix() {
+    return Math.max(0, hfcOriginalCost - hfcDiscount().amount);
+}
+
+// Ringkasan: Total Biaya = (Fix Cost - Diskon + Biaya tambahan) x Jumlah truk
 function hfcUpdateSummary() {
     const trucks = Math.max(1, parseInt(document.getElementById('truck-count').value, 10) || 1);
-    const fix = hfcCurrentFix();
+    const disc = hfcDiscount();
+    const after = hfcCurrentFix();
     const add = hfcAdditional();
-    document.getElementById('sum-fix').textContent = App.formatRp(fix);
-    document.getElementById('sum-add').textContent = App.formatRp(add.total);
+    const perTruck = after + add.total;
+    const rp = App.formatRp;
+    
+    document.getElementById('sum-fix').textContent = rp(hfcOriginalCost);
+    
+    const hasDisc = disc.amount > 0;
+    document.getElementById('row-disc').classList.toggle('hidden', !hasDisc);
+    document.getElementById('row-after').classList.toggle('hidden', !hasDisc);
+    document.getElementById('sum-disc-label').textContent = disc.label;
+    document.getElementById('sum-disc').textContent = '- ' + rp(disc.amount);
+    document.getElementById('sum-after').textContent = rp(after);
+    
+    const hasAdd = add.lines.length > 0;
+    document.getElementById('row-add').classList.toggle('hidden', !hasAdd);
+    document.getElementById('sum-add').textContent = '+ ' + rp(add.total);
+    document.getElementById('sum-detail').textContent = add.lines.map(l => `${l.name}: ${rp(l.subtotal)}`).join(' | ');
+    
     document.getElementById('sum-trucks').textContent = trucks;
-    document.getElementById('sum-total').textContent = App.formatRp((fix + add.total) * trucks);
-    document.getElementById('sum-detail').textContent = add.lines.map(l => `${l.name}: ${App.formatRp(l.subtotal)}`).join(' | ');
+    document.getElementById('sum-total').textContent = rp(perTruck * trucks);
+    
+    // Penjelasan rumus sesuai komponen yang dipakai
+    let words = 'Fix Cost per truk', nums = rp(hfcOriginalCost);
+    if (hasDisc) { words += ' - Diskon'; nums += ' - ' + rp(disc.amount); }
+    if (hasAdd) { words += ' + Biaya tambahan'; nums += ' + ' + rp(add.total); }
+    let formula;
+    if (hasDisc || hasAdd) { words = '(' + words + ')'; nums = '(' + nums + ')'; }
+    if (trucks > 1) { words += ' x Jumlah truk'; nums += ' x ' + trucks; }
+    formula = (hasDisc || hasAdd || trucks > 1) ? `Total Biaya = ${words}\n${nums} = ${rp(perTruck * trucks)}` : 'Total Biaya = Fix Cost per truk';
+    document.getElementById('sum-formula').innerText = formula;
 }
 
 // Backend mengirim pasangan origin_* / destination_*. prefix 'orig' -> origin_*, 'dest' -> destination_*
@@ -491,8 +537,7 @@ async function cekBiaya() {
         hfcTariffs = priced;
         hfcTariffKind = type;
         
-        document.getElementById('disc-percent').value = '';
-        document.getElementById('disc-rp').value = '';
+        hfcResetDiscount();
         document.getElementById('hfc-notes').value = '';
         document.getElementById('tonnage').value = '';
         document.getElementById('container-type').value = '';
@@ -548,45 +593,33 @@ function hfcSelectTariff(i) {
     hfcCurrentRow = row;
     hfcCurrentCostId = row.id;
     hfcOriginalCost = hfcTariffCost(row);
-    document.getElementById('calc-original-cost').textContent = App.formatRp(hfcOriginalCost);
     document.getElementById('gudang-muat').textContent = row.gudang_muat || '-';
     document.getElementById('gudang-bongkar').textContent = row.gudang_bongkar || '-';
     calculateFixCost();
 }
 
 function calculateFixCost() {
-    let fix = hfcOriginalCost;
-    const p = parseFloat(document.getElementById('disc-percent').value);
-    const r = parseFloat(document.getElementById('disc-rp').value);
-    
-    if (!isNaN(p) && p > 0) {
-        fix = hfcOriginalCost - (hfcOriginalCost * (p / 100));
-    } else if (!isNaN(r) && r > 0) {
-        fix = hfcOriginalCost - r;
-    }
-    
-    if (fix < 0) fix = 0;
-    
-    document.getElementById('calc-fix-cost').textContent = App.formatRp(fix);
     hfcUpdateSummary();
 }
 
 async function submitFixCost() {
     if (!hfcCurrentCostId || !hfcCurrentRow) return;
     
+    // Diskon: sesuai pilihan (tanpa diskon / persentase / nominal)
     let fix = hfcOriginalCost;
-    const p = parseFloat(document.getElementById('disc-percent').value);
-    const r = parseFloat(document.getElementById('disc-rp').value);
-    
     let disc_percent = 0;
     let disc_amount = 0;
-    
-    if (!isNaN(p) && p > 0) {
-        if (p > 100) { App.showToast('Discount tidak boleh lebih dari 100%', 'warning'); return; }
+    const mode = hfcDiscountMode();
+    if (mode === 'percent') {
+        const p = parseFloat(document.getElementById('disc-percent').value);
+        if (isNaN(p) || p <= 0) { App.showToast('Isi persentase diskon (lebih dari 0) atau pilih Tanpa diskon', 'warning'); return; }
+        if (p > 100) { App.showToast('Diskon tidak boleh lebih dari 100%', 'warning'); return; }
         disc_percent = p;
         fix = hfcOriginalCost - (hfcOriginalCost * (p / 100));
-    } else if (!isNaN(r) && r > 0) {
-        if (r > hfcOriginalCost) { App.showToast('Discount tidak boleh lebih besar dari Original Cost', 'warning'); return; }
+    } else if (mode === 'amount') {
+        const r = parseFloat(document.getElementById('disc-rp').value);
+        if (isNaN(r) || r <= 0) { App.showToast('Isi nominal diskon (lebih dari 0) atau pilih Tanpa diskon', 'warning'); return; }
+        if (r > hfcOriginalCost) { App.showToast('Diskon tidak boleh lebih besar dari Fix Cost', 'warning'); return; }
         disc_amount = r;
         fix = hfcOriginalCost - r;
     }
@@ -605,8 +638,6 @@ async function submitFixCost() {
 
     const trucks = Number(document.getElementById('truck-count').value);
     if (!Number.isInteger(trucks) || trucks < 1) { App.showToast('Jumlah truk minimal 1 (bilangan bulat)', 'warning'); return; }
-    const takedown = parseFloat(document.getElementById('takedown').value) || 0;
-    if (takedown < 0) { App.showToast('Durasi takedown tidak boleh negatif', 'warning'); return; }
 
     const svc = hfcService();
     const tkbmDtp = document.getElementById('q-tkbm-dtp-who').value;
@@ -657,7 +688,6 @@ async function submitFixCost() {
         gudang_muat: row.gudang_muat || null,
         gudang_bongkar: row.gudang_bongkar || null,
         truck_count: trucks,
-        takedown_duration: takedown,
         multipickup_points: pts('q-multipickup', 'q-multipickup-points'),
         multidrop_points: pts('q-multidrop', 'q-multidrop-points'),
         kawalan: document.getElementById('q-kawalan').checked ? 1 : 0,

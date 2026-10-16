@@ -43,11 +43,9 @@ router.post('/create', (req, res) => {
         }
         if (transport_type === 'land' && ton === null) return res.status(400).json({ error: 'Berat (tonase) wajib diisi untuk pengiriman darat' });
 
-        // Jumlah truk (wajib, bilangan bulat >= 1) dan durasi takedown (hari, opsional >= 0)
+        // Jumlah truk (wajib, bilangan bulat >= 1)
         const truckCount = req.body.truck_count === undefined || req.body.truck_count === '' ? 1 : Number(req.body.truck_count);
         if (!Number.isInteger(truckCount) || truckCount < 1) return res.status(400).json({ error: 'Jumlah truk harus bilangan bulat minimal 1' });
-        const takedown = req.body.takedown_duration === undefined || req.body.takedown_duration === '' || req.body.takedown_duration === null ? 0 : Number(req.body.takedown_duration);
-        if (!Number.isFinite(takedown) || takedown < 0) return res.status(400).json({ error: 'Durasi takedown harus berupa angka >= 0' });
 
         // Pertanyaan biaya tambahan: multipickup, multidrop, kawalan, TKBM Door to Port / Port to Door (laut)
         const pts = (v, label) => {
@@ -112,10 +110,10 @@ router.post('/create', (req, res) => {
         queryRun(`
             INSERT INTO fix_cost_requests 
             (request_number, requester_id, transport_type, origin_provinsi, origin_kota, origin_kecamatan, destination_provinsi, destination_kota, destination_kecamatan, original_cost, discount_percentage, discount_amount, fix_cost, notes, truck_type, container_type, tonnage,
-             service_type, gudang_muat, gudang_bongkar, truck_count, takedown_duration, multipickup_points, multidrop_points, kawalan, tkbm_dtp, tkbm_ptd, additional_cost, additional_detail, total_cost)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             service_type, gudang_muat, gudang_bongkar, truck_count, multipickup_points, multidrop_points, kawalan, tkbm_dtp, tkbm_ptd, additional_cost, additional_detail, total_cost)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [reqNum, req.session.userId, transport_type, origin_provinsi, origin_kota, origin_kecamatan, destination_provinsi, destination_kota, destination_kecamatan, original_cost, discount_percentage ?? 0, discount_amount ?? 0, fix_cost, notes ?? '', truckType, containerType, ton,
-            serviceType, gudangClean(req.body.gudang_muat), gudangClean(req.body.gudang_bongkar), truckCount, takedown, mpPoints, mdPoints, kawalan, tkbmDtp, tkbmPtd, additionalCost, JSON.stringify(detail), totalCost]);
+            serviceType, gudangClean(req.body.gudang_muat), gudangClean(req.body.gudang_bongkar), truckCount, mpPoints, mdPoints, kawalan, tkbmDtp, tkbmPtd, additionalCost, JSON.stringify(detail), totalCost]);
 
         res.json({ id: getLastInsertId(), request_number: reqNum, additional_cost: additionalCost, total_cost: totalCost });
     } catch (err) {

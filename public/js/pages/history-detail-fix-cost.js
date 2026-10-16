@@ -142,8 +142,7 @@ async function renderHistoryDetailFixCostInit(params) {
                             ['Layanan', serviceLabel(data.service_type || (data.transport_type === 'land' ? 'door_to_door' : null))],
                             ['Gudang Muat', data.gudang_muat || '-'],
                             ['Gudang Bongkar', data.gudang_bongkar || '-'],
-                            ['Jumlah Truk', data.truck_count || 1],
-                            ['Durasi Takedown', (Number(data.takedown_duration) || 0) + ' hari']
+                            ['Jumlah Truk', data.truck_count || 1]
                         ].map(([l, v]) => `
                         <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
                             <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">${l}</p>
