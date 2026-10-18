@@ -82,8 +82,10 @@ async function loadMasterDetail(params) {
                 ['TKBM', data.tkbm],
                 ['Maint Fee', data.maint_fee],
                 ['Risk Claim + IT', data.risk_claim_it],
+                ['Total Cost', data.total_cost],
                 ['Marketing', data.marketing],
-                ['Cost + PPH', data.cost_pph]
+                ['Total Cost + Profit + PPH', data.cost_pph],
+                ['Jasa', data.jasa]
             ];
             
             rowsHtml = fields.map(f => `
@@ -95,7 +97,7 @@ async function loadMasterDetail(params) {
             
             rowsHtml += `
                 <div class="flex justify-between py-3 mt-2 border-t-2 border-gray-200">
-                    <span class="font-bold text-gray-800">Total</span>
+                    <span class="font-bold text-gray-800">Total (Submit)</span>
                     <span class="font-bold text-lg text-blue-600">${App.formatRp(data.total)}</span>
                 </div>
             `;
@@ -124,6 +126,14 @@ async function loadMasterDetail(params) {
                         <p class="font-medium">${mdEsc(data.gudang_bongkar || '-')}</p>
                     </div>
                     <div>
+                        <p class="text-sm text-gray-500">Port Origin</p>
+                        <p class="font-medium">${mdEsc(data.port_origin || '-')}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Port Destination</p>
+                        <p class="font-medium">${mdEsc(data.port_destination || '-')}</p>
+                    </div>
+                    <div>
                         <p class="text-sm text-gray-500">Truck Type</p>
                         <p class="font-medium">${mdEsc(data.truck_type || '-')}</p>
                     </div>
@@ -136,13 +146,16 @@ async function loadMasterDetail(params) {
             
             const fields = [
                 ['Trucking Origin', data.trucking_origin],
+                ['Maint Fee', data.maint_fee],
+                ['Investasi Truck', data.investasi_truck],
                 ['THC Origin + LOLO', data.thc_origin_lolo],
-                ['THC Dest', data.thc_dest],
+                ['THC Dest', data.thc_dest, data.thc_dest_note],
                 ['Agent', data.agent],
-                ['TKBM', data.tkbm],
+                ['TKBM', data.tkbm, data.tkbm_note],
                 ['DO + Clean', data.do_clean],
                 ['Risk Claim', data.risk_claim],
                 ['Marketing', data.marketing],
+                ['Profit', data.profit],
                 ['Jasa', data.jasa],
                 ['Temas Freight', data.temas_freight],
                 ['Temas LSS', data.temas_lss],
@@ -153,7 +166,7 @@ async function loadMasterDetail(params) {
             rowsHtml = fields.map(f => `
                 <div class="flex justify-between py-2 border-b border-gray-50 last:border-0">
                     <span class="text-gray-600">${f[0]}</span>
-                    <span class="font-medium">${App.formatRp(f[1])}</span>
+                    <span class="font-medium">${f[2] && !Number(f[1]) ? mdEsc(f[2]) : App.formatRp(f[1])}</span>
                 </div>
             `).join('');
             
@@ -242,13 +255,15 @@ const MD_FIELDS = {
         ['km', 'KM', 'num'], ['type_mobil', 'Type Mobil', 'text'],
         ['uj_sopir', 'UJ Sopir', 'num'], ['tip_muat', 'Tip Muat', 'num'], ['tip_bongkar', 'Tip Bongkar', 'num'], ['tkbm', 'TKBM', 'num'],
         ['maint_fee', 'Maint Fee', 'num'], ['risk_claim_it', 'Risk Claim + IT', 'num'], ['marketing', 'Marketing', 'num'],
-        ['cost_pph', 'Cost + PPH', 'num'], ['total', 'Total', 'num']],
+        ['total_cost', 'Total Cost', 'num'], ['cost_pph', 'Total Cost + Profit + PPH', 'num'], ['total', 'Total (Submit)', 'num'], ['jasa', 'Jasa', 'num']],
     sea: [...MD_LOC_FIELDS,
         ['service_type', 'Layanan', 'svc'], ['gudang_muat', 'Gudang Muat', 'text'], ['gudang_bongkar', 'Gudang Bongkar', 'text'],
+        ['port_origin', 'Port Origin', 'text'], ['port_destination', 'Port Destination', 'text'],
         ['truck_type', 'Truck Type', 'text'], ['km_truck_origin', 'KM Truck Origin', 'num'],
-        ['trucking_origin', 'Trucking Origin', 'num'], ['thc_origin_lolo', 'THC Origin + LOLO', 'num'], ['thc_dest', 'THC Dest', 'num'],
+        ['trucking_origin', 'Trucking Origin', 'num'], ['maint_fee', 'Maint Fee', 'num'], ['investasi_truck', 'Investasi Truck', 'num'], ['thc_origin_lolo', 'THC Origin + LOLO', 'num'], ['thc_dest', 'THC Dest', 'num'],
         ['agent', 'Agent', 'num'], ['tkbm', 'TKBM', 'num'], ['do_clean', 'DO + Clean', 'num'], ['risk_claim', 'Risk Claim', 'num'],
-        ['marketing', 'Marketing', 'num'], ['jasa', 'Jasa', 'num'],
+        ['marketing', 'Marketing', 'num'], ['profit', 'Profit', 'num'], ['jasa', 'Jasa', 'num'],
+        ['thc_dest_note', 'Catatan THC Dest (mis. Include Agent)', 'text'], ['tkbm_note', 'Catatan TKBM (mis. FOT)', 'text'],
         ['temas_freight', 'Temas Freight', 'num'], ['temas_lss', 'Temas LSS', 'num'], ['temas_total_cost_pph', 'Temas Total', 'num'],
         ['meratus_freight', 'Meratus Freight', 'num'], ['meratus_lss', 'Meratus LSS', 'num'], ['meratus_total_cost_pph', 'Meratus Total', 'num'],
         ['submit_value', 'Submit Value', 'num']]

@@ -435,10 +435,13 @@ function hfcUpdateSummary() {
     document.getElementById('sum-formula').innerText = formula;
 }
 
+const HFC_NO_PROV = 'Tanpa Provinsi';
+
 // Backend mengirim pasangan origin_* / destination_*. prefix 'orig' -> origin_*, 'dest' -> destination_*
 function hfcPlace(prefix, l) {
     const k = prefix === 'orig' ? 'origin' : 'destination';
-    return { provinsi: l[k + '_provinsi'], kota: l[k + '_kota'], kecamatan: l[k + '_kecamatan'] };
+    // Data dari Excel bisa tanpa kolom provinsi: dikelompokkan sebagai "Tanpa Provinsi" supaya kota & kecamatan tetap bisa dipilih.
+    return { provinsi: l[k + '_provinsi'] || HFC_NO_PROV, kota: l[k + '_kota'], kecamatan: l[k + '_kecamatan'] };
 }
 
 function hfcUnique(values) {

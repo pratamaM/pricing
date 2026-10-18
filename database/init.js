@@ -2,6 +2,7 @@ const initSqlJs = require('sql.js');
 const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcryptjs');
+const { DEFAULT_VEHICLES } = require('../utils/vehicle');
 
 const DB_PATH = path.join(__dirname, 'pricing.db');
 let db = null;
@@ -171,10 +172,27 @@ async function initDb() {
         );
     `);
     if (db.exec('SELECT COUNT(*) FROM master_kendaraan')[0].values[0][0] === 0) {
-        for (const k of [['land', '20 Feet'], ['land', '40 Feet'], ['land', 'Wingbox'], ['sea', '20 Feet'], ['sea', '40 Feet']]) {
+        for (const k of DEFAULT_VEHICLES) {
             db.run('INSERT INTO master_kendaraan (category, name) VALUES (?, ?)', k);
         }
     }
+    // Nama bawaan lama diganti ke nama baku dari file ANGKUTAN (hanya bila nama baku belum ada di kategori itu)
+    for (const [cat, oldName, newName] of [['land', 'Wingbox', 'Tronton Wing Box'], ['land', '20 Feet', 'Trailer 20FT'], ['land', '40 Feet', 'Trailer 40FT'],
+                                           ['sea', '20 Feet', 'Trailer 20FT'], ['sea', '40 Feet', 'Trailer 40FT']]) {
+        const has = db.exec(`SELECT 1 FROM master_kendaraan WHERE category = '${cat}' AND name = '${newName}'`);
+        if (!has.length) db.run('UPDATE master_kendaraan SET name = ? WHERE category = ? AND name = ?', [newName, cat, oldName]);
+    }
+
+    // Kolom tambahan dari file Excel pricing (LAND: TOTAL COST & JASA; SEA: port, maint fee, investasi truck, profit, catatan THC Dest/TKBM)
+    ensureColumn('master_biaya_land', 'total_cost', 'REAL DEFAULT 0');
+    ensureColumn('master_biaya_land', 'jasa', 'REAL DEFAULT 0');
+    ensureColumn('master_biaya_sea', 'port_origin', 'TEXT');
+    ensureColumn('master_biaya_sea', 'port_destination', 'TEXT');
+    ensureColumn('master_biaya_sea', 'maint_fee', 'REAL DEFAULT 0');
+    ensureColumn('master_biaya_sea', 'investasi_truck', 'REAL DEFAULT 0');
+    ensureColumn('master_biaya_sea', 'profit', 'REAL DEFAULT 0');
+    ensureColumn('master_biaya_sea', 'thc_dest_note', 'TEXT');
+    ensureColumn('master_biaya_sea', 'tkbm_note', 'TEXT');
 
     // Kalkulasi: layanan, gudang, jumlah truk, durasi takedown, pertanyaan biaya tambahan
     ensureColumn('fix_cost_requests', 'service_type', 'TEXT');

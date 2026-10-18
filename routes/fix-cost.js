@@ -24,7 +24,8 @@ router.post('/create', (req, res) => {
 
         // Validasi isian wajib dengan pesan yang jelas (sebelumnya: error 500 kosong)
         if (!['land', 'sea'].includes(transport_type)) return res.status(400).json({ error: 'transport_type harus land atau sea' });
-        const kosong = ['origin_provinsi', 'origin_kota', 'origin_kecamatan', 'destination_provinsi', 'destination_kota', 'destination_kecamatan'].filter(k => !String(req.body[k] || '').trim());
+        // provinsi boleh kosong (data Excel tanpa provinsi)
+        const kosong = ['origin_kota', 'origin_kecamatan', 'destination_kota', 'destination_kecamatan'].filter(k => !String(req.body[k] || '').trim());
         if (kosong.length) return res.status(400).json({ error: `Isian wajib kosong: ${kosong.join(', ')}` });
         for (const k of ['original_cost', 'fix_cost']) {
             if (req.body[k] === undefined || req.body[k] === null || req.body[k] === '' || !Number.isFinite(Number(req.body[k]))) return res.status(400).json({ error: `${k} harus berupa angka` });

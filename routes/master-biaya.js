@@ -112,11 +112,11 @@ const LOC_FIELDS = ['origin_provinsi', 'origin_kota', 'origin_kecamatan', 'desti
 const EDITABLE = {
     land: {
         text: [...LOC_FIELDS, 'gudang_muat', 'gudang_bongkar', 'type_mobil'],
-        num: ['km', 'uj_sopir', 'tip_muat', 'tip_bongkar', 'tkbm', 'maint_fee', 'risk_claim_it', 'marketing', 'cost_pph', 'total']
+        num: ['km', 'uj_sopir', 'tip_muat', 'tip_bongkar', 'tkbm', 'maint_fee', 'risk_claim_it', 'total_cost', 'marketing', 'cost_pph', 'total', 'jasa']
     },
     sea: {
-        text: [...LOC_FIELDS, 'gudang_muat', 'gudang_bongkar', 'truck_type'],
-        num: ['km_truck_origin', 'trucking_origin', 'thc_origin_lolo', 'thc_dest', 'agent', 'tkbm', 'do_clean', 'risk_claim', 'marketing', 'jasa',
+        text: [...LOC_FIELDS, 'gudang_muat', 'gudang_bongkar', 'truck_type', 'port_origin', 'port_destination', 'thc_dest_note', 'tkbm_note'],
+        num: ['km_truck_origin', 'trucking_origin', 'maint_fee', 'investasi_truck', 'profit', 'thc_origin_lolo', 'thc_dest', 'agent', 'tkbm', 'do_clean', 'risk_claim', 'marketing', 'jasa',
               'temas_freight', 'temas_lss', 'temas_total_cost_pph', 'meratus_freight', 'meratus_lss', 'meratus_total_cost_pph', 'submit_value']
     }
 };

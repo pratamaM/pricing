@@ -1,7 +1,15 @@
 const express = require('express');
 const { queryAll, queryGet, queryRun, getLastInsertId } = require('../database/init');
 const { requireAuth, requireRole } = require('../middleware/auth');
+const multer = require('multer');
+const xlsx = require('xlsx');
+const fs = require('fs');
+const path = require('path');
+const { normalizeVehicle } = require('../utils/vehicle');
 const router = express.Router();
+const uploadDir = path.join(__dirname, '..', 'uploads');
+fs.mkdirSync(uploadDir, { recursive: true });
+const upload = multer({ dest: uploadDir });
 
 router.use(requireAuth);
 
@@ -17,6 +25,39 @@ router.get('/', (req, res) => {
         res.json(rows);
     } catch (err) {
         res.status(500).json({ error: errMsg(err) });
+    }
+});
+
+// Upload Excel daftar angkutan: kolom Number, Jenis_Angkutan (DARAT/LAUT), Nama_Truk. Nama yang sudah ada dilewati.
+router.post('/upload', requireRole(...ADMIN_ROLES), upload.single('file'), (req, res) => {
+    const filePath = req.file && req.file.path;
+    try {
+        if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+        const canon = (s) => String(s === null || s === undefined ? '' : s).toUpperCase().replace(/[\s_]+/g, '');
+        const wb = xlsx.readFile(filePath);
+        let added = 0, skipped = 0, found = false;
+        for (const name of wb.SheetNames) {
+            const aoa = xlsx.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: null });
+            const h = aoa.findIndex(r => r.some(c => canon(c) === 'JENISANGKUTAN') && r.some(c => canon(c) === 'NAMATRUK'));
+            if (h < 0) continue;
+            found = true;
+            const ci = aoa[h].findIndex(c => canon(c) === 'JENISANGKUTAN'), ni = aoa[h].findIndex(c => canon(c) === 'NAMATRUK');
+            for (const r of aoa.slice(h + 1)) {
+                const jenis = canon(r[ci]);
+                const cat = jenis === 'DARAT' || jenis === 'LAND' ? 'land' : (jenis === 'LAUT' || jenis === 'SEA' ? 'sea' : null);
+                const nm = normalizeVehicle(r[ni]);
+                if (!cat || !nm) continue;
+                if (queryGet('SELECT id FROM master_kendaraan WHERE category = ? AND LOWER(name) = LOWER(?)', [cat, nm])) { skipped++; continue; }
+                queryRun('INSERT INTO master_kendaraan (category, name) VALUES (?, ?)', [cat, nm.slice(0, 50)]);
+                added++;
+            }
+        }
+        if (!found) return res.status(400).json({ error: 'Header tidak ditemukan. Kolom yang dibutuhkan: Jenis_Angkutan (DARAT/LAUT) dan Nama_Truk.' });
+        res.json({ added, skipped });
+    } catch (err) {
+        res.status(500).json({ error: errMsg(err) });
+    } finally {
+        if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath);
     }
 });
 

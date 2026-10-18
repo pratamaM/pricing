@@ -14,10 +14,13 @@ function renderMasterKendaraan() {
                 <button id="mk-tab-sea" class="flex-1 sm:flex-none px-6 py-2 rounded-md text-sm font-medium transition-colors text-gray-500 hover:text-gray-700">Kendaraan Laut</button>
             </div>
             ${mkCanAdd() ? `
+            <div class="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+            <button type="button" id="mk-upload" class="flex items-center gap-2 border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"><i data-lucide="upload" class="w-4 h-4"></i> Upload Excel</button>
+            <input type="file" id="mk-file" accept=".xlsx, .xls" class="hidden">
             <form id="mk-form" class="flex items-center gap-2 w-full sm:w-auto">
-                <input type="text" id="mk-name" maxlength="50" required placeholder="mis. 20 Feet" class="w-full sm:w-48 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                <input type="text" id="mk-name" maxlength="50" required placeholder="mis. Trailer 20FT" class="w-full sm:w-48 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                 <button type="submit" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"><i data-lucide="plus" class="w-4 h-4"></i> Tambah</button>
-            </form>` : ''}
+            </form></div>` : ''}
         </div>
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <table class="w-full text-left text-sm">
@@ -52,6 +55,24 @@ async function renderMasterKendaraanInit() {
             App.showToast(err.message, 'error');
         }
     });
+    const fileInput = document.getElementById('mk-file');
+    if (fileInput) {
+        document.getElementById('mk-upload').addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', async () => {
+            if (!fileInput.files.length) return;
+            const fd = new FormData();
+            fd.append('file', fileInput.files[0]);
+            try {
+                const r = await App.apiUpload('/master-kendaraan/upload', fd);
+                App.showToast(`Upload selesai: ${r.added} kendaraan ditambahkan, ${r.skipped} sudah ada`, 'success');
+                mkLoad();
+            } catch (err) {
+                App.showToast(err.message, 'error');
+            } finally {
+                fileInput.value = '';
+            }
+        });
+    }
     mkLoad();
 }
 
