@@ -159,6 +159,7 @@ function handleUpload(type) {
                 }
 
                 let c = 0, prevOrigin = null;
+                const sheetProv = name.replace(/_+/g, ' ').replace(/\s+/g, ' ').trim() || null;
                 for (let r = loc.dataStart; r < aoa.length; r++) {
                     const line = aoa[r] || [];
                     const get = (col) => (loc.colOf[col] === undefined ? null : line[loc.colOf[col]]);
@@ -168,6 +169,10 @@ function handleUpload(type) {
                     const originEmpty = !o.prov && !o.kota && !o.kec;
                     const destEmpty = !d.prov && !d.kota && !d.kec;
                     if (originEmpty && destEmpty) continue; // baris kosong / baris nomor saja (template)
+
+                    // Kolom provinsi kosong -> pakai provinsi dari nama sheet (mis. sheet "Jakarta", "Jawa_Barat" -> "Jawa Barat").
+                    if (!o.prov) o.prov = sheetProv;
+                    if (!d.prov) d.prov = sheetProv;
 
                     // Sel origin yang digabung (merge) di Excel hanya terisi di baris pertama -> baris berikutnya memakai origin di atasnya.
                     if (originEmpty && prevOrigin) Object.assign(o, prevOrigin);
