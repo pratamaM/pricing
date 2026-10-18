@@ -6,6 +6,7 @@ const fs = require('fs');
 const { queryRun, saveDb, getDb } = require('../database/init');
 const { requireRole } = require('../middleware/auth');
 const { normalizeVehicle } = require('../utils/vehicle');
+const { provinceFor } = require('../utils/wilayah');
 
 const router = express.Router();
 
@@ -170,15 +171,16 @@ function handleUpload(type) {
                     const destEmpty = !d.prov && !d.kota && !d.kec;
                     if (originEmpty && destEmpty) continue; // baris kosong / baris nomor saja (template)
 
-                    // Kolom provinsi kosong -> pakai provinsi dari nama sheet (mis. sheet "Jakarta", "Jawa_Barat" -> "Jawa Barat").
-                    if (!o.prov) o.prov = sheetProv;
-                    if (!d.prov) d.prov = sheetProv;
-
                     // Sel origin yang digabung (merge) di Excel hanya terisi di baris pertama -> baris berikutnya memakai origin di atasnya.
                     if (originEmpty && prevOrigin) Object.assign(o, prevOrigin);
                     // Kecamatan kosong -> pakai nama kota, supaya bisa dipilih di Hitung Fix Cost.
                     if (!o.kec && o.kota) o.kec = o.kota;
                     if (!d.kec && d.kota) d.kec = d.kota;
+                    // Kolom provinsi kosong -> provinsi sesuai kota/kecamatannya (daftar wilayah);
+                    // bila wilayahnya tidak dikenal -> provinsi dari nama sheet (mis. "Jawa_Barat" -> "Jawa Barat").
+                    if (!o.prov) o.prov = provinceFor(o.kota, o.kec) || sheetProv;
+                    if (!d.prov) d.prov = provinceFor(d.kota, d.kec) || sheetProv;
+
                     prevOrigin = { prov: o.prov, kota: o.kota, kec: o.kec };
 
                     const notes = {};

@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const { DEFAULT_VEHICLES } = require('../utils/vehicle');
+const { provinceFor } = require('../utils/wilayah');
 
 const DB_PATH = path.join(__dirname, 'pricing.db');
 let db = null;
@@ -208,6 +209,21 @@ async function initDb() {
     ensureColumn('fix_cost_requests', 'additional_cost', 'REAL DEFAULT 0');
     ensureColumn('fix_cost_requests', 'additional_detail', 'TEXT');
     ensureColumn('fix_cost_requests', 'total_cost', 'REAL');
+
+    // Perbaiki provinsi yang kosong atau salah tebak (hanya 'Jakarta'/'Jawa Barat' hasil upload lama) agar sesuai kota/kecamatannya
+    {
+        let fixed = 0;
+        for (const tbl of ['master_biaya_land', 'master_biaya_sea']) {
+            for (const side of ['origin', 'destination']) {
+                const rows = db.exec(`SELECT id, ${side}_kota, ${side}_kecamatan, ${side}_provinsi FROM ${tbl} WHERE ${side}_provinsi IS NULL OR ${side}_provinsi IN ('', 'Jakarta', 'Jawa Barat')`);
+                for (const [id, kota, kec, prov] of (rows[0] ? rows[0].values : [])) {
+                    const right = provinceFor(kota, kec);
+                    if (right && right !== prov) { db.run(`UPDATE ${tbl} SET ${side}_provinsi = ? WHERE id = ?`, [right, id]); fixed++; }
+                }
+            }
+        }
+        if (fixed) console.log(`Migrasi database: ${fixed} provinsi Master Biaya diperbaiki sesuai kota.`);
+    }
 
     const res = db.exec('SELECT COUNT(*) as count FROM users');
     let count = 0;
