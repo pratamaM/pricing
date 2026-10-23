@@ -20,6 +20,10 @@ function renderMasterBiaya() {
                 </div>
                 
                 ${['superadmin', 'admin'].includes(App.user?.role) ? `
+                <a id="btn-template-sea" href="api/upload/template/sea" download class="hidden items-center gap-2 border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap" title="Contoh file upload Sea (6 sheet master)">
+                    <i data-lucide="download" class="w-4 h-4"></i>
+                    <span class="hidden sm:inline">Template Sea</span>
+                </a>
                 <button id="btn-upload" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap">
                     <i data-lucide="upload" class="w-4 h-4"></i>
                     <span class="hidden sm:inline">Upload Excel</span>
@@ -106,6 +110,7 @@ async function renderMasterBiayaInit() {
                 
                 const up = await App.apiUpload(`/upload/${currentMasterBiayaType}`, formData);
                 App.showToast(`Upload successful: ${up.rowsInserted} baris diimpor`, 'success');
+                if (up.warnings && up.warnings.length) App.showToast(`${up.warnings.length} baris master dilewati: ${up.warnings.slice(0, 3).join(' | ')}${up.warnings.length > 3 ? ' ...' : ''}`, 'warning');
                 loadMasterBiayaData();
             } catch (err) {
                 App.showToast(err.message, 'error');
@@ -118,7 +123,16 @@ async function renderMasterBiayaInit() {
         });
     }
 
+    mbToggleTemplateLink();
     loadMasterBiayaData();
+}
+
+// Tombol "Template Sea" hanya tampil di tab Sea (dan hanya ada untuk admin/superadmin)
+function mbToggleTemplateLink() {
+    const a = document.getElementById('btn-template-sea');
+    if (!a) return;
+    a.classList.toggle('hidden', currentMasterBiayaType !== 'sea');
+    a.classList.toggle('flex', currentMasterBiayaType === 'sea');
 }
 
 function setMbTab(type, btn) {
@@ -129,6 +143,7 @@ function setMbTab(type, btn) {
     document.getElementById('tab-sea').className = 'flex-1 sm:flex-none px-6 py-2 rounded-md text-sm font-medium transition-colors text-gray-500 hover:text-gray-700';
     
     btn.className = 'flex-1 sm:flex-none px-6 py-2 rounded-md text-sm font-medium transition-colors bg-white shadow text-gray-800';
+    mbToggleTemplateLink();
     
     loadMasterBiayaData();
 }

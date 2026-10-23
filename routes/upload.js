@@ -93,8 +93,8 @@ const looksNumeric = (v) => typeof v === 'number' || /^[\s\d.,-]+$/.test(String(
 
 // Cari baris header (baris 1-8, tempat judul bisa ada di atasnya), gabungkan header dua tingkat
 // (mis. "TEMAS" di atas "FREIGHT" / "FS(LSS)" / "TOTAL COST + PPH"), dan petakan tiap kolom spec ke nomor kolom sheet.
-function locateColumns(aoa, spec) {
-    const locAliases = new Set(LOC.flatMap(l => l.headers));
+function locateColumns(aoa, spec, anchors) {
+    const locAliases = new Set(anchors || LOC.flatMap(l => l.headers));
     let h = -1;
     for (let i = 0; i < Math.min(aoa.length, 8); i++) {
         const hits = (aoa[i] || []).filter(c => !isBlank(c) && locAliases.has(canon(c))).length;
@@ -137,6 +137,112 @@ function locateColumns(aoa, spec) {
     return { colOf, dataStart: h + (nextIsSub ? 2 : 1) };
 }
 
+// ---- Upload SEA dari master terpisah (file "master sea untuk upload") ----
+// Satu file berisi 6 sheet master. Aplikasi menggabungkannya jadi baris Master Biaya Sea lengkap:
+//   MASTER TRUCKING ORIGIN      : origin, port, type truck, KM, trucking, maint fee, investasi truck
+//   MASTER TRUCKING DESTINATION : destination, type truck, agent
+//   MASTER PORT OF LOAD         : THC origin + LOLO per port & type truck
+//   MASTER PORT OF DISC         : THC dest per port tujuan & type truck
+//   MASTER PTP                  : freight & FS(LSS) Temas / Meratus per port asal, port tujuan, type truck
+//   MASTER OTHERS               : DO+CLEAN, risk claim, marketing per type truck (opsional: PROFIT, MARGIN SUBMIT)
+// Rumus (cocok dengan file hasil): Total = (semua biaya + profit + freight + LSS) / 0.98 (PPH 2%);
+// Submit = (Total Temas + margin) dibulatkan ke atas per 10.000. Profit bawaan 1.500.000, margin Submit bawaan 500.000.
+const PPH_DIVISOR = 0.98, DEFAULT_PROFIT = 1500000, DEFAULT_SUBMIT_MARGIN = 500000;
+const SEA_MASTER_SHEETS = {
+    origin: { sheet: 'MASTER TRUCKING ORIGIN', spec: [t('kota', 'ORIGIN KOTA'), t('kec', 'ORIGIN KECAMATAN'), t('port', 'PORT', 'PORT ORIGIN'), t('truck', 'TRUCK TYPE'),
+        n('km', 'KM TRUCK ORIGIN', 'KM'), n('trucking', 'TRUCKING ORIGIN'), n('maint', 'MAINT FEE (2500x KM)', 'MAINT FEE'), n('invest', 'INVESTASI TRUCK', 'IKNVESTASI TRUCK')] },
+    dest: { sheet: 'MASTER TRUCKING DESTINATION', spec: [t('kota', 'DESTINATION KOTA'), t('kec', 'DESTINATION KECAMATAN'), t('truck', 'TRUCK TYPE'), n('agent', 'AGENT')] },
+    load: { sheet: 'MASTER PORT OF LOAD', spec: [t('port', 'PORT ORIGIN', 'PORT OF LOAD', 'PORT'), t('truck', 'TRUCK TYPE'), n('thc', 'THC ORIGIN + LOLO ORIGIN')] },
+    disc: { sheet: 'MASTER PORT OF DISC', spec: [t('port', 'PORT DESTINATION', 'PORT OF DISC', 'PORT'), t('truck', 'TRUCK TYPE'), n('thc', 'THC DEST')] },
+    ptp: { sheet: 'MASTER PTP', spec: [t('from', 'PORT ORIGIN'), t('to', 'PORT DESTINATION'), t('truck', 'TRUCK TYPE'),
+        n('tF', 'TEMAS FREIGHT'), n('tL', 'TEMAS FS(LSS)', 'TEMAS LSS'), n('mF', 'MERATUS FREIGHT'), n('mL', 'MERATUS FS(LSS)', 'MERATUS LSS')] },
+    others: { sheet: 'MASTER OTHERS', spec: [t('truck', 'TRUCK TYPE'), n('doClean', 'DO+CLEAN', 'DO + CLEAN'), n('risk', 'RISK CLAIM'), n('marketing', 'MARKETING'),
+        n('profit', 'PROFIT'), n('margin', 'MARGIN SUBMIT', 'SUBMIT MARGIN')] }
+};
+
+const isSeaMasterWorkbook = (wb) => {
+    const names = new Set(wb.SheetNames.map(canon));
+    return names.has(canon(SEA_MASTER_SHEETS.origin.sheet)) && names.has(canon(SEA_MASTER_SHEETS.ptp.sheet));
+};
+
+// Baca satu sheet master jadi daftar objek {field: nilai}. Kolom yang tidak ada di sheet -> undefined.
+function readMasterSheet(wb, def) {
+    const real = wb.SheetNames.find(s => canon(s) === canon(def.sheet));
+    if (!real) return null;
+    const aoa = xlsx.utils.sheet_to_json(wb.Sheets[real], { header: 1, defval: null, blankrows: true });
+    const loc = locateColumns(aoa, def.spec, def.spec.flatMap(s => s.headers));
+    if (!loc) throw new Error(`Header sheet "${real}" tidak dikenali. Kolom yang dibutuhkan: ${def.spec.filter(s => !['profit', 'margin'].includes(s.col)).map(s => s.headers[0]).join(', ')}.`);
+    const out = [];
+    for (let r = loc.dataStart; r < aoa.length; r++) {
+        const line = aoa[r] || [];
+        if (line.every(isBlank)) continue;
+        const o = {};
+        for (const s of def.spec) {
+            const v = loc.colOf[s.col] === undefined ? undefined : line[loc.colOf[s.col]];
+            o[s.col] = v === undefined ? undefined : (s.kind === 'num' ? (isBlank(v) ? 0 : toNum(v)) : toText(v));
+        }
+        // type truck: samakan nama (20ft -> Trailer 20FT)
+        if ('truck' in o) o.truck = normalizeVehicle(o.truck);
+        out.push(o);
+    }
+    return out;
+}
+
+// Gabungkan master-master tadi. Mengembalikan { rows: [{kolom: nilai}], warnings: [teks] }.
+function composeSeaRows(wb) {
+    const missing = Object.values(SEA_MASTER_SHEETS).filter(d => !wb.SheetNames.some(s => canon(s) === canon(d.sheet))).map(d => d.sheet);
+    if (missing.length) throw new Error(`Sheet berikut tidak ditemukan di file: ${missing.join(', ')}.`);
+    const M = {};
+    for (const [k, def] of Object.entries(SEA_MASTER_SHEETS)) M[k] = readMasterSheet(wb, def);
+
+    const key = (...p) => p.map(x => canon(x)).join('|');
+    const loadBy = new Map(M.load.map(r => [key(r.port, r.truck), r]));
+    const discBy = new Map(M.disc.map(r => [key(r.port, r.truck), r]));
+    const othersBy = new Map(M.others.map(r => [key(r.truck), r]));
+    const ptpBy = new Map();
+    for (const r of M.ptp) { const k = key(r.from, r.truck); if (!ptpBy.has(k)) ptpBy.set(k, []); ptpBy.get(k).push(r); }
+
+    const rows = [], warnings = [];
+    const warn = (msg) => { if (warnings.length < 30) warnings.push(msg); };
+    const round10k = (x) => Math.ceil(x / 10000 - 1e-9) * 10000;
+
+    M.origin.forEach((o, i) => {
+        const label = `${o.kota || '?'} (${o.truck || '?'}) - baris ${i + 1} sheet ${SEA_MASTER_SHEETS.origin.sheet}`;
+        if (!o.kota || !o.port || !o.truck) return warn(`${label}: origin, port, atau type truck kosong, dilewati.`);
+        const thcLoad = loadBy.get(key(o.port, o.truck));
+        if (!thcLoad) return warn(`${label}: THC origin untuk port ${o.port} / ${o.truck} tidak ada di ${SEA_MASTER_SHEETS.load.sheet}, dilewati.`);
+        const oth = othersBy.get(key(o.truck));
+        if (!oth) return warn(`${label}: type truck ${o.truck} tidak ada di ${SEA_MASTER_SHEETS.others.sheet}, dilewati.`);
+        const routes = ptpBy.get(key(o.port, o.truck));
+        if (!routes) return warn(`${label}: tidak ada tarif pelayaran dari port ${o.port} / ${o.truck} di ${SEA_MASTER_SHEETS.ptp.sheet}, dilewati.`);
+
+        for (const p of routes) {
+            const thcDisc = discBy.get(key(p.to, o.truck));
+            const dests = M.dest.filter(d => canon(d.truck) === canon(o.truck) && canon(d.kota) === canon(p.to));
+            if (!dests.length) { warn(`${label}: tujuan ${p.to} / ${o.truck} tidak ada di ${SEA_MASTER_SHEETS.dest.sheet}, dilewati.`); continue; }
+            for (const d of dests) {
+                const thcDest = thcDisc ? thcDisc.thc : 0;
+                const profit = oth.profit !== undefined && oth.profit !== 0 ? oth.profit : DEFAULT_PROFIT;
+                const margin = oth.margin !== undefined && oth.margin !== 0 ? oth.margin : DEFAULT_SUBMIT_MARGIN;
+                const base = o.trucking + o.maint + o.invest + thcLoad.thc + thcDest + d.agent + oth.doClean + oth.risk + oth.marketing + profit;
+                const temas = (base + p.tF + p.tL) / PPH_DIVISOR;
+                const meratus = (base + p.mF + p.mL) / PPH_DIVISOR;
+                rows.push({
+                    origin_provinsi: provinceFor(o.kota, o.kec), origin_kota: o.kota, origin_kecamatan: o.kec || o.kota,
+                    destination_provinsi: provinceFor(d.kota, d.kec), destination_kota: d.kota, destination_kecamatan: d.kec || d.kota,
+                    service_type: 'door_to_port', port_origin: o.port, port_destination: p.to, truck_type: o.truck,
+                    km_truck_origin: o.km, trucking_origin: o.trucking, maint_fee: o.maint, investasi_truck: o.invest,
+                    thc_origin_lolo: thcLoad.thc, thc_dest: thcDest, thc_dest_note: thcDest === 0 ? 'Include Agent' : null,
+                    agent: d.agent, tkbm: 0, tkbm_note: 'FOT', do_clean: oth.doClean, risk_claim: oth.risk, marketing: oth.marketing, profit,
+                    temas_freight: p.tF, temas_lss: p.tL, meratus_freight: p.mF, meratus_lss: p.mL,
+                    temas_total_cost_pph: temas, meratus_total_cost_pph: meratus, submit_value: round10k(temas + margin)
+                });
+            }
+        }
+    });
+    return { rows, warnings };
+}
+
 function handleUpload(type) {
     return (req, res) => {
         const filePath = req.file && req.file.path;
@@ -149,9 +255,22 @@ function handleUpload(type) {
 
             const workbook = xlsx.readFile(filePath);
             const toInsert = [], sheets = [], skippedSheets = [];
+            let warnings = [], format = 'tabel';
+
+            // SEA dari file master terpisah (6 sheet): digabung otomatis jadi baris lengkap
+            if (type === 'sea' && isSeaMasterWorkbook(workbook)) {
+                format = 'master-sea';
+                const composed = composeSeaRows(workbook);
+                warnings = composed.warnings;
+                for (const o of composed.rows) {
+                    toInsert.push([...spec.map(s => (o[s.col] !== undefined && o[s.col] !== null) ? o[s.col] : (s.kind === 'num' ? 0 : null)),
+                        ...NOTE_COLS[type].map(k => o[k] || null), req.session.userId]);
+                }
+                sheets.push({ name: 'Gabungan master', rows: composed.rows.length });
+            }
 
             // Baca SEMUA sheet. Baris header dicari otomatis (di antara 8 baris pertama), data mulai setelahnya.
-            for (const name of workbook.SheetNames) {
+            for (const name of (format === 'master-sea' ? [] : workbook.SheetNames)) {
                 const aoa = xlsx.utils.sheet_to_json(workbook.Sheets[name], { header: 1, defval: null, blankrows: true });
                 const loc = locateColumns(aoa, spec);
                 if (!loc || (loc.colOf.origin_kecamatan === undefined && loc.colOf.destination_kecamatan === undefined)) {
@@ -223,6 +342,7 @@ function handleUpload(type) {
             }
 
             if (toInsert.length === 0) {
+                if (format === 'master-sea') return res.status(400).json({ error: 'Tidak ada baris gabungan yang terbentuk.' + (warnings.length ? ' ' + warnings.slice(0, 5).join(' ') : '') });
                 return res.status(400).json({
                     error: 'Tidak ada baris yang bisa diimpor. Pastikan ada baris header (ORIGIN/DESTINATION ... ) dan minimal satu baris data.'
                         + (skippedSheets.length ? ` Sheet dilewati karena header tidak dikenali: ${skippedSheets.join(', ')}.` : '')
@@ -241,7 +361,7 @@ function handleUpload(type) {
             }
             saveDb();
 
-            res.json({ message: 'Success', rowsInserted: toInsert.length, sheets, skippedSheets });
+            res.json({ message: 'Success', format, rowsInserted: toInsert.length, sheets, skippedSheets, warnings });
         } catch (err) {
             res.status(500).json({ error: (err && err.message) ? err.message : String(err) });
         } finally {
@@ -249,6 +369,11 @@ function handleUpload(type) {
         }
     };
 }
+
+// Contoh file upload Sea (6 sheet master) - hanya admin & superadmin (router sudah dibatasi)
+router.get('/template/sea', (req, res) => {
+    res.download(path.join(__dirname, '..', 'templates', 'master_sea_untuk_upload.xlsx'), 'master_sea_untuk_upload.xlsx');
+});
 
 router.post('/land', upload.single('file'), handleUpload('land'));
 router.post('/sea', upload.single('file'), handleUpload('sea'));
