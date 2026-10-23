@@ -20,9 +20,9 @@ function renderMasterBiaya() {
                 </div>
                 
                 ${['superadmin', 'admin'].includes(App.user?.role) ? `
-                <a id="btn-template-sea" href="api/upload/template/sea" download class="hidden items-center gap-2 border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap" title="Contoh file upload Sea (6 sheet master)">
+                <a id="btn-template-sea" href="api/upload/template/sea" download class="flex items-center gap-2 border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap" title="Contoh file upload (sheet-sheet master)">
                     <i data-lucide="download" class="w-4 h-4"></i>
-                    <span class="hidden sm:inline">Template Sea</span>
+                    <span id="btn-template-label" class="hidden sm:inline">Template</span>
                 </a>
                 <button id="btn-upload" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap">
                     <i data-lucide="upload" class="w-4 h-4"></i>
@@ -103,13 +103,22 @@ async function renderMasterBiayaInit() {
             
             const formData = new FormData();
             formData.append('file', file);
+
+            // Upload mengganti seluruh data lama (tipe yang sedang dibuka) dengan isi file
+            let oldCount = 0;
+            try { oldCount = (await App.api('/master-biaya/count'))[currentMasterBiayaType] || 0; } catch (e) { /* hanya untuk teks konfirmasi */ }
+            const label = currentMasterBiayaType === 'sea' ? 'Sea' : 'Darat';
+            if (!confirm(`Upload akan MENGHAPUS ${oldCount} baris data Master Biaya ${label} yang lama lalu menggantinya dengan isi file ini.\n\nLanjutkan?`)) {
+                fileUpload.value = '';
+                return;
+            }
             
             try {
                 btnUpload.disabled = true;
                 btnUpload.innerHTML = '<div class="spinner w-4 h-4 border-2"></div>';
                 
-                const up = await App.apiUpload(`/upload/${currentMasterBiayaType}`, formData);
-                App.showToast(`Upload successful: ${up.rowsInserted} baris diimpor`, 'success');
+                const up = await App.apiUpload(`/upload/${currentMasterBiayaType}?replace=1`, formData);
+                App.showToast(`Upload berhasil: ${up.rowsInserted} baris diimpor${up.deleted ? `, ${up.deleted} baris lama dihapus` : ''}`, 'success');
                 if (up.warnings && up.warnings.length) App.showToast(`${up.warnings.length} baris master dilewati: ${up.warnings.slice(0, 3).join(' | ')}${up.warnings.length > 3 ? ' ...' : ''}`, 'warning');
                 loadMasterBiayaData();
             } catch (err) {
@@ -127,12 +136,13 @@ async function renderMasterBiayaInit() {
     loadMasterBiayaData();
 }
 
-// Tombol "Template Sea" hanya tampil di tab Sea (dan hanya ada untuk admin/superadmin)
+// Tombol template mengikuti tab aktif (Darat / Sea)
 function mbToggleTemplateLink() {
     const a = document.getElementById('btn-template-sea');
     if (!a) return;
-    a.classList.toggle('hidden', currentMasterBiayaType !== 'sea');
-    a.classList.toggle('flex', currentMasterBiayaType === 'sea');
+    a.setAttribute('href', `api/upload/template/${currentMasterBiayaType}`);
+    const lbl = document.getElementById('btn-template-label');
+    if (lbl) lbl.textContent = currentMasterBiayaType === 'sea' ? 'Template Sea' : 'Template Darat';
 }
 
 function setMbTab(type, btn) {

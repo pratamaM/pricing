@@ -3,7 +3,7 @@ const multer = require('multer');
 const xlsx = require('xlsx');
 const path = require('path');
 const fs = require('fs');
-const { queryRun, saveDb, getDb } = require('../database/init');
+const { queryRun, queryGet, saveDb, getDb } = require('../database/init');
 const { requireRole } = require('../middleware/auth');
 const { normalizeVehicle } = require('../utils/vehicle');
 const { provinceFor } = require('../utils/wilayah');
@@ -171,7 +171,7 @@ function readMasterSheet(wb, def) {
     if (!real) return null;
     const aoa = xlsx.utils.sheet_to_json(wb.Sheets[real], { header: 1, defval: null, blankrows: true });
     const loc = locateColumns(aoa, def.spec, def.spec.flatMap(s => s.headers));
-    if (!loc) throw new Error(`Header sheet "${real}" tidak dikenali. Kolom yang dibutuhkan: ${def.spec.filter(s => !['profit', 'margin'].includes(s.col)).map(s => s.headers[0]).join(', ')}.`);
+    if (!loc) throw new Error(`Header sheet "${real}" tidak dikenali. Kolom yang dibutuhkan: ${def.spec.filter(s => !(def.optional || ['profit', 'margin']).includes(s.col)).map(s => s.headers[0]).join(', ')}.`);
     const out = [];
     for (let r = loc.dataStart; r < aoa.length; r++) {
         const line = aoa[r] || [];
@@ -243,6 +243,55 @@ function composeSeaRows(wb) {
     return { rows, warnings };
 }
 
+// ---- Upload DARAT dari master terpisah (Door to Door) ----
+//   MASTER RUTE   : origin, destination, unit, KM, UJ SUPIR per rute
+//   MASTER OTHERS : tip muat, tip bongkar, risk claim/IT, marketing, maint fee per KM (opsional: rasio UJ supir) per unit
+// Rumus (cocok dengan file hasil): Maint Fee = KM x tarif per KM; Total Cost = UJ Supir + Tip Muat + Tip Bongkar + Maint Fee + Risk Claim/IT;
+// Total Cost + Profit + PPH = (Total Cost + Marketing) / 0,98; Submit = UJ Supir / rasio (bawaan 0,3) dibulatkan ke atas per 1.000; Jasa = Submit - (Total Cost + Profit + PPH).
+const DEFAULT_MAINT_PER_KM = 3000, DEFAULT_UJ_RATIO = 0.3;
+const LAND_MASTER_SHEETS = {
+    rute: { sheet: 'MASTER RUTE', optional: [], spec: [t('kota', 'ORIGIN KOTA'), t('kec', 'ORIGIN KECAMATAN'), t('dKota', 'DESTINATION KOTA', 'DESTINATON KOTA'), t('dKec', 'DESTINATION KECAMATAN', 'DESTINATON KECAMATAN'),
+        t('truck', 'UNIT', 'TYPE MOBIL', 'TRUCK TYPE'), n('km', 'KM'), n('uj', 'UJ SUPIR', 'UJ SOPIR')] },
+    others: { sheet: 'MASTER OTHERS', optional: ['ratio'], spec: [t('truck', 'UNIT', 'TYPE MOBIL', 'TRUCK TYPE'), n('tipMuat', 'TIP MUAT'), n('tipBongkar', 'TIP BONGKAR'),
+        n('risk', 'RISK CLAIM/IT', 'RISK CLAIM + IT', 'RISK CLAIM'), n('marketing', 'MARKETING'), n('maintKm', 'MAINT FEE PER KM', 'MANT. FEE PER KM', 'MAINT. FEE/KM', 'MAINT FEE/KM'),
+        n('ratio', 'RASIO UJ SUPIR', 'RASIO UJ SOPIR')] }
+};
+
+const isLandMasterWorkbook = (wb) => wb.SheetNames.some(s => canon(s) === canon(LAND_MASTER_SHEETS.rute.sheet));
+
+function composeLandRows(wb) {
+    const missing = Object.values(LAND_MASTER_SHEETS).filter(d => !wb.SheetNames.some(s => canon(s) === canon(d.sheet))).map(d => d.sheet);
+    if (missing.length) throw new Error(`Sheet berikut tidak ditemukan di file: ${missing.join(', ')}.`);
+    const rute = readMasterSheet(wb, LAND_MASTER_SHEETS.rute);
+    const others = new Map(readMasterSheet(wb, LAND_MASTER_SHEETS.others).map(r => [canon(r.truck), r]));
+    const rows = [], warnings = [];
+    const warn = (msg) => { if (warnings.length < 30) warnings.push(msg); };
+    let prev = null;
+
+    rute.forEach((r, i) => {
+        // Origin yang kosong (sel digabung) memakai baris di atasnya
+        if (!r.kota && !r.kec && prev) { r.kota = prev.kota; r.kec = prev.kec; }
+        if (r.kota) prev = { kota: r.kota, kec: r.kec };
+        const label = `${r.kota || '?'} - ${r.dKota || '?'} (${r.truck || '?'}) - baris ${i + 1} sheet ${LAND_MASTER_SHEETS.rute.sheet}`;
+        if (!r.kota || !r.dKota || !r.truck) return warn(`${label}: origin, tujuan, atau unit kosong, dilewati.`);
+        const o = others.get(canon(r.truck));
+        if (!o) return warn(`${label}: unit ${r.truck} tidak ada di ${LAND_MASTER_SHEETS.others.sheet}, dilewati.`);
+        const kmRate = o.maintKm ? o.maintKm : DEFAULT_MAINT_PER_KM;
+        const ratio = o.ratio ? o.ratio : DEFAULT_UJ_RATIO;
+        const maint = r.km * kmRate;
+        const totalCost = r.uj + o.tipMuat + o.tipBongkar + maint + o.risk;
+        const costPph = (totalCost + o.marketing) / PPH_DIVISOR;
+        const submit = Math.ceil(r.uj / ratio / 1000 - 1e-9) * 1000;
+        rows.push({
+            origin_provinsi: provinceFor(r.kota, r.kec), origin_kota: r.kota, origin_kecamatan: r.kec || r.kota,
+            destination_provinsi: provinceFor(r.dKota, r.dKec), destination_kota: r.dKota, destination_kecamatan: r.dKec || r.dKota,
+            service_type: 'door_to_door', type_mobil: r.truck, km: r.km, uj_sopir: r.uj, tip_muat: o.tipMuat, tip_bongkar: o.tipBongkar, tkbm: 0,
+            maint_fee: maint, risk_claim_it: o.risk, total_cost: totalCost, marketing: o.marketing, cost_pph: costPph, total: submit, jasa: submit - costPph
+        });
+    });
+    return { rows, warnings };
+}
+
 function handleUpload(type) {
     return (req, res) => {
         const filePath = req.file && req.file.path;
@@ -257,10 +306,11 @@ function handleUpload(type) {
             const toInsert = [], sheets = [], skippedSheets = [];
             let warnings = [], format = 'tabel';
 
-            // SEA dari file master terpisah (6 sheet): digabung otomatis jadi baris lengkap
-            if (type === 'sea' && isSeaMasterWorkbook(workbook)) {
-                format = 'master-sea';
-                const composed = composeSeaRows(workbook);
+            // File master terpisah (SEA: 6 sheet, DARAT: Master Rute + Master Others): digabung otomatis jadi baris lengkap
+            const isMaster = (type === 'sea' && isSeaMasterWorkbook(workbook)) || (type === 'land' && isLandMasterWorkbook(workbook));
+            if (isMaster) {
+                format = type === 'sea' ? 'master-sea' : 'master-darat';
+                const composed = type === 'sea' ? composeSeaRows(workbook) : composeLandRows(workbook);
                 warnings = composed.warnings;
                 for (const o of composed.rows) {
                     toInsert.push([...spec.map(s => (o[s.col] !== undefined && o[s.col] !== null) ? o[s.col] : (s.kind === 'num' ? 0 : null)),
@@ -270,7 +320,7 @@ function handleUpload(type) {
             }
 
             // Baca SEMUA sheet. Baris header dicari otomatis (di antara 8 baris pertama), data mulai setelahnya.
-            for (const name of (format === 'master-sea' ? [] : workbook.SheetNames)) {
+            for (const name of (isMaster ? [] : workbook.SheetNames)) {
                 const aoa = xlsx.utils.sheet_to_json(workbook.Sheets[name], { header: 1, defval: null, blankrows: true });
                 const loc = locateColumns(aoa, spec);
                 if (!loc || (loc.colOf.origin_kecamatan === undefined && loc.colOf.destination_kecamatan === undefined)) {
@@ -342,7 +392,7 @@ function handleUpload(type) {
             }
 
             if (toInsert.length === 0) {
-                if (format === 'master-sea') return res.status(400).json({ error: 'Tidak ada baris gabungan yang terbentuk.' + (warnings.length ? ' ' + warnings.slice(0, 5).join(' ') : '') });
+                if (isMaster) return res.status(400).json({ error: 'Tidak ada baris gabungan yang terbentuk.' + (warnings.length ? ' ' + warnings.slice(0, 5).join(' ') : '') });
                 return res.status(400).json({
                     error: 'Tidak ada baris yang bisa diimpor. Pastikan ada baris header (ORIGIN/DESTINATION ... ) dan minimal satu baris data.'
                         + (skippedSheets.length ? ` Sheet dilewati karena header tidak dikenali: ${skippedSheets.join(', ')}.` : '')
@@ -350,9 +400,16 @@ function handleUpload(type) {
             }
 
             // Satu transaksi: kalau ada yang gagal, tidak ada baris setengah masuk.
+            // ?replace=1 -> hapus semua data lama (tipe ini) dulu, dalam transaksi yang sama dengan impor
+            const replace = req.query.replace === '1';
+            let deleted = 0;
             const db = getDb();
             db.run('BEGIN');
             try {
+                if (replace) {
+                    deleted = queryGet(`SELECT COUNT(*) AS c FROM master_biaya_${type}`).c;
+                    queryRun(`DELETE FROM master_biaya_${type}`, [], false);
+                }
                 for (const p of toInsert) queryRun(sql, p, false);
                 db.run('COMMIT');
             } catch (e) {
@@ -361,7 +418,7 @@ function handleUpload(type) {
             }
             saveDb();
 
-            res.json({ message: 'Success', format, rowsInserted: toInsert.length, sheets, skippedSheets, warnings });
+            res.json({ message: 'Success', format, deleted, rowsInserted: toInsert.length, sheets, skippedSheets, warnings });
         } catch (err) {
             res.status(500).json({ error: (err && err.message) ? err.message : String(err) });
         } finally {
@@ -373,6 +430,10 @@ function handleUpload(type) {
 // Contoh file upload Sea (6 sheet master) - hanya admin & superadmin (router sudah dibatasi)
 router.get('/template/sea', (req, res) => {
     res.download(path.join(__dirname, '..', 'templates', 'master_sea_untuk_upload.xlsx'), 'master_sea_untuk_upload.xlsx');
+});
+
+router.get('/template/land', (req, res) => {
+    res.download(path.join(__dirname, '..', 'templates', 'master_darat_untuk_upload.xlsx'), 'master_darat_untuk_upload.xlsx');
 });
 
 router.post('/land', upload.single('file'), handleUpload('land'));
