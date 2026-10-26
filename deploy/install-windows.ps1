@@ -74,6 +74,25 @@ if ($Uninstall) {
 if (-not (Test-Path (Join-Path $AppDir 'server.js'))) { Fail "server.js tidak ditemukan di $AppDir. Jalankan script dari dalam folder aplikasi (deploy\install-windows.ps1)." }
 if ($Port -lt 1 -or $Port -gt 65535) { Fail 'Port tidak valid.' }
 
+# ---- 0. Cek port: jangan menabrak aplikasi lain ----
+Step "Memeriksa port yang dipakai"
+Stop-AppProcesses   # sisa instalasi Pricing sebelumnya dihentikan dulu supaya tidak dianggap bentrok
+$cekPorts = @($Port)
+if ($Domain) { $cekPorts += 80, 443 }
+$bentrok = $false
+foreach ($pt in ($cekPorts | Select-Object -Unique)) {
+    $dipakai = Get-NetTCPConnection -State Listen -LocalPort $pt -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($dipakai) {
+        $proc = Get-Process -Id $dipakai.OwningProcess -ErrorAction SilentlyContinue
+        $nama = if ($proc) { "$($proc.ProcessName) (PID $($dipakai.OwningProcess))" } else { "PID $($dipakai.OwningProcess)" }
+        Write-Host "Port $pt SUDAH DIPAKAI oleh $nama." -ForegroundColor Red
+        $bentrok = $true
+    } else {
+        Write-Host "Port $pt bebas." -ForegroundColor Green
+    }
+}
+if ($bentrok) { Fail 'Ada port yang sudah dipakai aplikasi lain. Jalankan ulang dengan port lain, mis. -Port 8081. Tidak ada yang diubah.' }
+
 # ---- 1. Node.js ----
 Step 'Memeriksa Node.js'
 function Get-NodeMajor {
