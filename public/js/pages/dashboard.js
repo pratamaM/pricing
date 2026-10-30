@@ -2,7 +2,7 @@ function renderDashboard() {
     return `
     <div class="space-y-6">
         <!-- Summary Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" id="dashboard-summary">
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4" id="dashboard-summary">
             <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-blue-500 flex items-center justify-between">
                 <div>
                     <p class="text-sm text-gray-500 mb-1">Total Routes</p>
@@ -45,7 +45,7 @@ function renderDashboard() {
         </div>
 
         <!-- Charts -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <div class="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
                 <h3 class="text-lg font-semibold text-gray-800 mb-4">Top Cost Destinations (Land)</h3>
                 <div class="relative h-64 w-full">

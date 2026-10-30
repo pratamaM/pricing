@@ -33,7 +33,7 @@ function renderHitungFixCost() {
                 </select>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <!-- Origin -->
                 <div class="space-y-4">
                     <h4 class="font-medium text-gray-700 flex items-center gap-2"><i data-lucide="map-pin" class="w-4 h-4 text-green-500"></i> Origin</h4>
@@ -81,7 +81,7 @@ function renderHitungFixCost() {
             <h3 class="text-lg font-semibold text-gray-800 mb-6 border-b pb-4">Kalkulasi Fix Cost</h3>
             
             <!-- Detail pengiriman (gudang dari Master Biaya; sisanya diisi manual) -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 pb-6 border-b border-gray-100">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6 pb-6 border-b border-gray-100">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Gudang Muat</label>
                     <p id="gudang-muat" class="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-800">-</p>
@@ -114,7 +114,7 @@ function renderHitungFixCost() {
                 <div class="md:col-span-3 mt-2 pt-4 border-t border-gray-100">
                     <h4 class="font-medium text-gray-800 mb-3">Biaya Tambahan</h4>
                     <p class="text-xs text-gray-500 mb-3">Semua jasa bersifat opsional. Centang jasa yang dipakai lalu isi nominalnya sesuai pengiriman ini (harga jasa bisa berbeda tiap pengiriman).</p>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4">
                         <div>
                             <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="q-multipickup" class="w-4 h-4 text-blue-600"> <span class="text-sm font-medium text-gray-700">Multi Pickup</span></label>
                             <div id="q-multipickup-n" class="hidden mt-2 flex flex-wrap items-center gap-2"><input type="number" id="q-multipickup-points" min="1" step="1" value="1" class="w-24 border-gray-300 rounded-lg p-2 border text-sm focus:ring-2 focus:ring-blue-500 outline-none"> <span class="text-xs text-gray-500">titik x</span> <input type="number" id="q-multipickup-amt" min="0" step="any" placeholder="Rp" class="w-36 border-gray-300 rounded-lg p-2 border text-sm focus:ring-2 focus:ring-blue-500 outline-none"></div>
@@ -146,7 +146,7 @@ function renderHitungFixCost() {
                 </div>
             </div>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Diskon</label>

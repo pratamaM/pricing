@@ -71,3 +71,8 @@ body {
     background: rgba(15, 23, 42, 0.5);
     backdrop-filter: blur(2px);
 }
+
+/* Responsif: anak grid boleh mengecil (tanpa ini grafik melebarkan kolom grid sampai halaman terpotong) */
+.grid > * { min-width: 0; }
+#main-content { max-width: 100%; }
+canvas { max-width: 100%; }
