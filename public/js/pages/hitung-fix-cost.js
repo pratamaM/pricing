@@ -22,6 +22,12 @@ function renderHitungFixCost() {
                 </label>
             </div>
 
+            <!-- Jenis layanan hanya tampil untuk darat (Door to Door); laut selalu satu paket -->
+            <div id="svc-wrap" class="mb-6 max-w-xs">
+                <label class="block text-sm text-gray-500 mb-1">Jenis Layanan</label>
+                <p class="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-800">Door to Door</p>
+            </div>
+
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <!-- Origin -->
                 <div class="space-y-4">
@@ -278,6 +284,7 @@ function hfcService() {
 
 function hfcApplyTypeUi() {
     const sea = hfcType() === 'sea';
+    document.getElementById('svc-wrap').classList.toggle('hidden', sea);
 }
 
 // Pertanyaan yang tampil mengikuti jenis layanan. Semua jasa opsional; nominal diisi manual per pengiriman
