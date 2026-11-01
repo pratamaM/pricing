@@ -4,7 +4,7 @@ function renderHistoryDetailFixCost(params) {
         <div>
             <button id="btn-back" class="flex items-center gap-2 text-gray-500 hover:text-gray-800 transition-colors">
                 <i data-lucide="arrow-left" class="w-4 h-4"></i>
-                <span>Back to History</span>
+                <span>Back to Monitoring Cost</span>
             </button>
         </div>
         

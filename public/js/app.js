@@ -139,34 +139,34 @@ const App = {
             menuItems.push({ id: 'dashboard', icon: 'layout-dashboard', label: 'Dashboard' });
             menuItems.push({ id: 'master-biaya', icon: 'database', label: 'Master Biaya' });
             menuItems.push({ id: 'master-kendaraan', icon: 'truck', label: 'Master Kendaraan' });
-            menuItems.push({ id: 'hitung-fix-cost', icon: 'calculator', label: 'Hitung Fix Cost' });
-            menuItems.push({ id: 'history-fix-cost', icon: 'history', label: 'History Fix Cost' });
+            menuItems.push({ id: 'hitung-fix-cost', icon: 'calculator', label: 'Calculate Cost' });
+            menuItems.push({ id: 'history-fix-cost', icon: 'history', label: 'Monitoring Cost' });
         } else if (role === 'admin') {
             // Admin: setting + membuat pengajuan + melihat history/detail (tanpa hak approval)
             menuItems.push({ id: 'konfigurasi-user', icon: 'users', label: 'Konfigurasi User' });
             menuItems.push({ id: 'dashboard', icon: 'layout-dashboard', label: 'Dashboard' });
             menuItems.push({ id: 'master-biaya', icon: 'database', label: 'Master Biaya' });
             menuItems.push({ id: 'master-kendaraan', icon: 'truck', label: 'Master Kendaraan' });
-            menuItems.push({ id: 'hitung-fix-cost', icon: 'calculator', label: 'Hitung Fix Cost' });
-            menuItems.push({ id: 'history-fix-cost', icon: 'history', label: 'History Fix Cost' });
+            menuItems.push({ id: 'hitung-fix-cost', icon: 'calculator', label: 'Calculate Cost' });
+            menuItems.push({ id: 'history-fix-cost', icon: 'history', label: 'Monitoring Cost' });
         } else if (role === 'user') {
             menuItems.push({ id: 'dashboard', icon: 'layout-dashboard', label: 'Dashboard' });
             menuItems.push({ id: 'master-biaya', icon: 'database', label: 'Master Biaya' });
             menuItems.push({ id: 'master-kendaraan', icon: 'truck', label: 'Master Kendaraan' });
-            menuItems.push({ id: 'hitung-fix-cost', icon: 'calculator', label: 'Hitung Fix Cost' });
-            menuItems.push({ id: 'history-fix-cost', icon: 'history', label: 'History Fix Cost' });
+            menuItems.push({ id: 'hitung-fix-cost', icon: 'calculator', label: 'Calculate Cost' });
+            menuItems.push({ id: 'history-fix-cost', icon: 'history', label: 'Monitoring Cost' });
         } else if (role === 'supervisor') {
             menuItems.push({ id: 'dashboard', icon: 'layout-dashboard', label: 'Dashboard' });
             menuItems.push({ id: 'master-biaya', icon: 'database', label: 'Master Biaya' });
             menuItems.push({ id: 'master-kendaraan', icon: 'truck', label: 'Master Kendaraan' });
-            menuItems.push({ id: 'hitung-fix-cost', icon: 'calculator', label: 'Hitung Fix Cost' });
-            menuItems.push({ id: 'history-fix-cost', icon: 'history', label: 'History Fix Cost' });
+            menuItems.push({ id: 'hitung-fix-cost', icon: 'calculator', label: 'Calculate Cost' });
+            menuItems.push({ id: 'history-fix-cost', icon: 'history', label: 'Monitoring Cost' });
         } else if (role === 'atasan') {
             menuItems.push({ id: 'dashboard', icon: 'layout-dashboard', label: 'Dashboard' });
             menuItems.push({ id: 'master-biaya', icon: 'database', label: 'Master Biaya' });
             menuItems.push({ id: 'master-kendaraan', icon: 'truck', label: 'Master Kendaraan' });
-            menuItems.push({ id: 'hitung-fix-cost', icon: 'calculator', label: 'Hitung Fix Cost' });
-            menuItems.push({ id: 'history-fix-cost', icon: 'history', label: 'History Fix Cost' });
+            menuItems.push({ id: 'hitung-fix-cost', icon: 'calculator', label: 'Calculate Cost' });
+            menuItems.push({ id: 'history-fix-cost', icon: 'history', label: 'Monitoring Cost' });
         }
         
         menuItems.forEach(item => {
@@ -193,7 +193,7 @@ const App = {
         this.refreshPendingBadge();
     },
     
-    // Badge "pending approval" di menu History Fix Cost, tampil untuk semua role
+    // Badge "pending approval" di menu Monitoring Cost, tampil untuk semua role
     async refreshPendingBadge() {
         try {
             const res = await this.api('/fix-cost/pending-count');
@@ -246,12 +246,12 @@ const App = {
                     initFn = renderMasterDetailBiayaInit;
                     break;
                 case 'hitung-fix-cost':
-                    title = 'Hitung Fix Cost';
+                    title = 'Calculate Cost';
                     html = renderHitungFixCost();
                     initFn = renderHitungFixCostInit;
                     break;
                 case 'history-fix-cost':
-                    title = 'History Fix Cost';
+                    title = 'Monitoring Cost';
                     html = renderHistoryFixCost();
                     initFn = renderHistoryFixCostInit;
                     break;
