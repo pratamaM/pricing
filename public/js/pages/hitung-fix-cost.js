@@ -22,12 +22,6 @@ function renderHitungFixCost() {
                 </label>
             </div>
 
-            <!-- Jenis layanan: darat = Door to Door (tetap); laut = pilih -->
-            <div class="mb-6 max-w-xs">
-                <label class="block text-sm text-gray-500 mb-1">Jenis Layanan</label>
-                <p id="svc-land" class="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-800">Door to Door</p>
-            </div>
-
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <!-- Origin -->
                 <div class="space-y-4">
@@ -284,7 +278,6 @@ function hfcService() {
 
 function hfcApplyTypeUi() {
     const sea = hfcType() === 'sea';
-    document.getElementById('svc-land').textContent = sea ? 'Door to Door (Door → Port → Port → Door), harga satu paket' : 'Door to Door';
 }
 
 // Pertanyaan yang tampil mengikuti jenis layanan. Semua jasa opsional; nominal diisi manual per pengiriman

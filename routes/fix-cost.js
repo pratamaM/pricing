@@ -140,8 +140,7 @@ router.get('/list', (req, res) => {
             query += " WHERE f.status = 'pending' OR f.requester_id = ?";
             params.push(userId);
         } else if (role === 'atasan') {
-            query += " WHERE f.status = 'approved_supervisor' OR f.requester_id = ?";
-            params.push(userId);
+            // atasan memantau semua pengajuan sejak dibuat (termasuk yang belum di-approve supervisor); hanya bisa memutuskan saat status approved_supervisor
         } else if (role === 'superadmin' || role === 'admin') {
             // semua (admin read-only)
         }
