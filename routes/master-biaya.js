@@ -6,6 +6,28 @@ const router = express.Router();
 // Layanan laut: Door to Port, Port to Port, Port to Door. Layanan darat selalu Door to Door.
 const SEA_SERVICES = ['door_to_port', 'port_to_port', 'port_to_door'];
 
+// ---- Komposisi layanan laut ----
+// Master Sea disimpan sebagai Door to Port (lengkap dengan trucking asal). Layanan lain dihitung dari baris itu:
+//  Port to Port = Door to Port tanpa Trucking Origin, Maint Fee, Investasi Truck (sisanya tetap, tetap dibagi 0,98)
+//  Port to Door = Port to Port + trucking tujuan (diisi user saat menghitung, ditambahkan langsung per truk)
+const PPH_DIVISOR = 0.98;
+const round10k = (x) => Math.ceil(x / 10000 - 1e-9) * 10000;
+function derivePortToPort(r, svc) {
+    const cut = (Number(r.trucking_origin) || 0) + (Number(r.maint_fee) || 0) + (Number(r.investasi_truck) || 0);
+    const temas = Number(r.temas_total_cost_pph) || 0;
+    const meratus = Number(r.meratus_total_cost_pph) || 0;
+    const margin = Math.floor(((Number(r.submit_value) || 0) - temas) / 10000) * 10000; // margin submit asli (kelipatan 10.000)
+    const temasPtp = Math.max(0, temas - cut / PPH_DIVISOR);
+    return Object.assign({}, r, {
+        service_type: svc, derived: 1,
+        trucking_origin: 0, maint_fee: 0, investasi_truck: 0, km_truck_origin: 0,
+        temas_total_cost_pph: temasPtp,
+        meratus_total_cost_pph: Math.max(0, meratus - cut / PPH_DIVISOR),
+        submit_value: Number(r.submit_value) > 0 ? round10k(temasPtp + Math.max(0, margin)) : 0
+    });
+}
+const isPtpFamily = (svc) => svc === 'port_to_port' || svc === 'port_to_door';
+
 router.use(requireAuth);
 
 router.get('/list', (req, res) => {
@@ -68,6 +90,12 @@ router.get('/locations', (req, res) => {
         const type = req.query.type === 'sea' ? 'sea' : 'land';
         const svc = type === 'sea' && SEA_SERVICES.includes(req.query.service_type) ? req.query.service_type : null;
         const data = queryAll(`SELECT DISTINCT origin_provinsi, origin_kota, origin_kecamatan, destination_provinsi, destination_kota, destination_kecamatan FROM master_biaya_${type} WHERE destination_kecamatan IS NOT NULL AND destination_kecamatan != ''${svc ? ' AND service_type = ?' : ''}`, svc ? [svc] : []);
+        if (type === 'sea' && isPtpFamily(svc)) {
+            // rute Port to Port / Port to Door ikut tersedia dari rute Door to Port
+            const extra = queryAll(`SELECT DISTINCT origin_provinsi, origin_kota, origin_kecamatan, destination_provinsi, destination_kota, destination_kecamatan FROM master_biaya_sea WHERE destination_kecamatan IS NOT NULL AND destination_kecamatan != '' AND service_type = 'door_to_port'`);
+            const seen = new Set(data.map(d => JSON.stringify(d)));
+            for (const e of extra) if (!seen.has(JSON.stringify(e))) data.push(e);
+        }
         res.json(data);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -80,7 +108,13 @@ router.get('/get-costs', (req, res) => {
         const type = req.query.type === 'sea' ? 'sea' : 'land';
         const { origin_kecamatan, dest_kecamatan } = req.query;
         const svc = type === 'sea' && SEA_SERVICES.includes(req.query.service_type) ? req.query.service_type : null;
-        res.json(queryAll(`SELECT * FROM master_biaya_${type} WHERE origin_kecamatan = ? AND destination_kecamatan = ?${svc ? ' AND service_type = ?' : ''} ORDER BY id`, svc ? [origin_kecamatan, dest_kecamatan, svc] : [origin_kecamatan, dest_kecamatan]));
+        const rows = queryAll(`SELECT * FROM master_biaya_${type} WHERE origin_kecamatan = ? AND destination_kecamatan = ?${svc ? ' AND service_type = ?' : ''} ORDER BY id`, svc ? [origin_kecamatan, dest_kecamatan, svc] : [origin_kecamatan, dest_kecamatan]);
+        if (type === 'sea' && isPtpFamily(svc)) {
+            // hitung dari Door to Port (tanpa trucking asal); baris tersimpan layanan ini dipakai bila tidak ada Door to Port
+            const dtp = queryAll(`SELECT * FROM master_biaya_sea WHERE origin_kecamatan = ? AND destination_kecamatan = ? AND service_type = 'door_to_port' ORDER BY id`, [origin_kecamatan, dest_kecamatan]);
+            if (dtp.length) return res.json(dtp.map(r => derivePortToPort(r, svc)));
+        }
+        res.json(rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

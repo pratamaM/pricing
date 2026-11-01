@@ -70,7 +70,7 @@ router.post('/create', (req, res) => {
 
         // Semua jasa OPSIONAL dan tidak punya master: nominal diisi langsung per pengiriman.
         // jasa_amounts: nominal per satuan untuk jasa bawaan yang dipilih; extra_jasa: [{name, amount}] jasa lain.
-        const JASA_NAMES = { multipickup: 'Multi Pickup (per titik)', multidrop: 'Multi Drop (per titik)', kawalan: 'Kawalan', tkbm_dtp: 'TKBM Door to Port', tkbm_ptd: 'TKBM Port to Door' };
+        const JASA_NAMES = { multipickup: 'Multi Pickup (per titik)', multidrop: 'Multi Drop (per titik)', kawalan: 'Kawalan', tkbm_dtp: 'TKBM Door to Port', tkbm_ptd: 'TKBM Port to Door', trucking_ptd: 'Trucking Port to Door (pelabuhan tujuan - alamat tujuan)' };
         const ov = (req.body.jasa_amounts && typeof req.body.jasa_amounts === 'object') ? req.body.jasa_amounts : {};
         const toAmount = (raw, label) => {
             const n = (raw === undefined || raw === null || raw === '') ? NaN : Number(raw);
@@ -88,6 +88,10 @@ router.post('/create', (req, res) => {
         addLine('kawalan', kawalan);
         if (tkbmDtp === 'perusahaan') addLine('tkbm_dtp', 1);
         if (tkbmPtd === 'perusahaan') addLine('tkbm_ptd', 1);
+        if (transport_type === 'sea' && serviceType === 'port_to_door') {
+            if (ov.trucking_ptd === undefined || ov.trucking_ptd === null || ov.trucking_ptd === '') return res.status(400).json({ error: 'Biaya trucking tujuan (pelabuhan ke alamat tujuan) wajib diisi untuk Port to Door' });
+            addLine('trucking_ptd', 1);
+        }
         if (Array.isArray(req.body.extra_jasa)) {
             if (req.body.extra_jasa.length > 20) return res.status(400).json({ error: 'Jasa lainnya maksimal 20 baris' });
             for (const e of req.body.extra_jasa) {
