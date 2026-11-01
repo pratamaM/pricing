@@ -26,11 +26,6 @@ function renderHitungFixCost() {
             <div class="mb-6 max-w-xs">
                 <label class="block text-sm text-gray-500 mb-1">Jenis Layanan</label>
                 <p id="svc-land" class="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-800">Door to Door</p>
-                <select id="hfc-service" class="hidden w-full border-gray-300 rounded-lg p-2.5 border focus:ring-2 focus:ring-blue-500 outline-none">
-                    <option value="door_to_port">Door to Port</option>
-                    <option value="port_to_port">Port to Port</option>
-                    <option value="port_to_door">Port to Door</option>
-                </select>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -227,10 +222,7 @@ async function renderHitungFixCostInit() {
             document.getElementById('cost-panel').classList.add('hidden');
         });
     });
-    document.getElementById('hfc-service').addEventListener('change', () => {
-        loadLocations('sea');
-        document.getElementById('cost-panel').classList.add('hidden');
-    });
+    
 
     // Pertanyaan biaya tambahan (semua opsional) -> tampilkan kolom nominal & hitung ulang ringkasan
     for (const [chk, box] of [['q-multipickup', 'q-multipickup-n'], ['q-multidrop', 'q-multidrop-n'], ['q-kawalan', 'q-kawalan-n']]) {
@@ -286,13 +278,13 @@ function hfcType() {
 
 // Darat = Door to Door (tetap); laut = pilihan Door to Port / Port to Port / Port to Door
 function hfcService() {
-    return hfcType() === 'land' ? 'door_to_door' : document.getElementById('hfc-service').value;
+    // laut: tarif dasar selalu diambil dari Door to Port (master); hasil akhirnya satu paket Door to Door (lihat payload)
+    return hfcType() === 'land' ? 'door_to_door' : 'door_to_port';
 }
 
 function hfcApplyTypeUi() {
     const sea = hfcType() === 'sea';
-    document.getElementById('svc-land').classList.toggle('hidden', sea);
-    document.getElementById('hfc-service').classList.toggle('hidden', !sea);
+    document.getElementById('svc-land').textContent = sea ? 'Door to Door (Door → Port → Port → Door), harga satu paket' : 'Door to Door';
 }
 
 // Pertanyaan yang tampil mengikuti jenis layanan. Semua jasa opsional; nominal diisi manual per pengiriman
@@ -307,9 +299,9 @@ const HFC_JASA = {
 
 function hfcRefreshQuestions() {
     const type = hfcType(), svc = hfcService();
-    document.getElementById('q-tkbm-dtp').classList.toggle('hidden', !(type === 'sea' && svc === 'door_to_port'));
-    document.getElementById('q-tkbm-ptd').classList.toggle('hidden', !(type === 'sea' && svc === 'port_to_door'));
-    document.getElementById('q-trk-ptd').classList.toggle('hidden', !(type === 'sea' && svc === 'port_to_door'));
+    document.getElementById('q-tkbm-dtp').classList.toggle('hidden', type !== 'sea');
+    document.getElementById('q-tkbm-ptd').classList.toggle('hidden', type !== 'sea');
+    document.getElementById('q-trk-ptd').classList.toggle('hidden', type !== 'sea');
     document.getElementById('q-trk-ptd-amt').value = '';
     document.getElementById('ton-req').classList.toggle('hidden', type !== 'land'); // berat wajib untuk darat
 
@@ -351,7 +343,7 @@ function hfcAdditional() {
     if (document.getElementById('q-multidrop').checked) add(HFC_JASA.multidrop, pts('q-multidrop-points'), num('q-multidrop-amt'));
     if (document.getElementById('q-kawalan').checked) add(HFC_JASA.kawalan, 1, num('q-kawalan-amt'));
     if (type === 'sea') {
-        if (hfcService() === 'port_to_door') add(HFC_JASA.trucking_ptd, 1, num('q-trk-ptd-amt'));
+        add(HFC_JASA.trucking_ptd, 1, num('q-trk-ptd-amt'));
         if (document.getElementById('q-tkbm-dtp-who').value === 'perusahaan') add(HFC_JASA.tkbm_dtp, 1, num('q-tkbm-dtp-amt'));
         if (document.getElementById('q-tkbm-ptd-who').value === 'perusahaan') add(HFC_JASA.tkbm_ptd, 1, num('q-tkbm-ptd-amt'));
     }
@@ -675,9 +667,9 @@ async function submitFixCost() {
     take('multipickup', document.getElementById('q-multipickup').checked, 'q-multipickup-amt');
     take('multidrop', document.getElementById('q-multidrop').checked, 'q-multidrop-amt');
     take('kawalan', document.getElementById('q-kawalan').checked, 'q-kawalan-amt');
-    take('trucking_ptd', type === 'sea' && svc === 'port_to_door', 'q-trk-ptd-amt');
-    take('tkbm_dtp', type === 'sea' && svc === 'door_to_port' && tkbmDtp === 'perusahaan', 'q-tkbm-dtp-amt');
-    take('tkbm_ptd', type === 'sea' && svc === 'port_to_door' && tkbmPtd === 'perusahaan', 'q-tkbm-ptd-amt');
+    take('trucking_ptd', type === 'sea', 'q-trk-ptd-amt');
+    take('tkbm_dtp', type === 'sea' && tkbmDtp === 'perusahaan', 'q-tkbm-dtp-amt');
+    take('tkbm_ptd', type === 'sea' && tkbmPtd === 'perusahaan', 'q-tkbm-ptd-amt');
     const extraJasa = [];
     document.querySelectorAll('.q-extra-row').forEach(r => {
         const name = r.querySelector('.q-extra-name').value.trim();
@@ -705,15 +697,15 @@ async function submitFixCost() {
         truck_type: hfcTariffName(row) || null,
         container_type: container || null,
         tonnage: isNaN(ton) ? null : ton,
-        service_type: svc,
+        service_type: type === 'sea' ? 'door_to_door' : svc,
         gudang_muat: row.gudang_muat || null,
         gudang_bongkar: row.gudang_bongkar || null,
         truck_count: trucks,
         multipickup_points: pts('q-multipickup', 'q-multipickup-points'),
         multidrop_points: pts('q-multidrop', 'q-multidrop-points'),
         kawalan: document.getElementById('q-kawalan').checked ? 1 : 0,
-        tkbm_dtp: type === 'sea' && svc === 'door_to_port' ? tkbmDtp : null,
-        tkbm_ptd: type === 'sea' && svc === 'port_to_door' ? tkbmPtd : null,
+        tkbm_dtp: type === 'sea' ? tkbmDtp : null,
+        tkbm_ptd: type === 'sea' ? tkbmPtd : null,
         jasa_amounts: jasaAmounts,
         extra_jasa: extraJasa
     };

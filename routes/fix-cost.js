@@ -32,9 +32,9 @@ router.post('/create', (req, res) => {
         }
 
         // Jenis layanan: darat = Door to Door; laut = Door to Port / Port to Port / Port to Door
-        const SEA_SERVICES = ['door_to_port', 'port_to_port', 'port_to_door'];
+        const SEA_SERVICES = ['door_to_door', 'door_to_port', 'port_to_port', 'port_to_door']; // laut dari Hitung Fix Cost = door_to_door (satu paket)
         const serviceType = transport_type === 'land' ? 'door_to_door' : req.body.service_type;
-        if (transport_type === 'sea' && !SEA_SERVICES.includes(serviceType)) return res.status(400).json({ error: 'service_type laut harus door_to_port, port_to_port, atau port_to_door' });
+        if (transport_type === 'sea' && !SEA_SERVICES.includes(serviceType)) return res.status(400).json({ error: 'service_type laut tidak valid' });
 
         // Berat (tonase) wajib untuk pengiriman darat; untuk laut opsional tetapi kalau diisi harus > 0.
         let ton = null;
@@ -88,8 +88,8 @@ router.post('/create', (req, res) => {
         addLine('kawalan', kawalan);
         if (tkbmDtp === 'perusahaan') addLine('tkbm_dtp', 1);
         if (tkbmPtd === 'perusahaan') addLine('tkbm_ptd', 1);
-        if (transport_type === 'sea' && serviceType === 'port_to_door') {
-            if (ov.trucking_ptd === undefined || ov.trucking_ptd === null || ov.trucking_ptd === '') return res.status(400).json({ error: 'Biaya trucking tujuan (pelabuhan ke alamat tujuan) wajib diisi untuk Port to Door' });
+        if (transport_type === 'sea') {
+            if (ov.trucking_ptd === undefined || ov.trucking_ptd === null || ov.trucking_ptd === '') return res.status(400).json({ error: 'Biaya trucking tujuan (pelabuhan ke alamat tujuan) wajib diisi untuk pengiriman laut' });
             addLine('trucking_ptd', 1);
         }
         if (Array.isArray(req.body.extra_jasa)) {
