@@ -26,6 +26,18 @@ function derivePortToPort(r, svc) {
         submit_value: Number(r.submit_value) > 0 ? round10k(temasPtp + Math.max(0, margin)) : 0
     });
 }
+
+// Harga submit per pelayaran. Submit di master dihitung dari Temas; Meratus memakai margin submit yang sama.
+function seaCarrierPrices(r) {
+    const sub = Number(r.submit_value) || 0;
+    const tem = Number(r.temas_total_cost_pph) || 0, mer = Number(r.meratus_total_cost_pph) || 0;
+    const hasT = (Number(r.temas_freight) || 0) + (Number(r.temas_lss) || 0) > 0;
+    const hasM = (Number(r.meratus_freight) || 0) + (Number(r.meratus_lss) || 0) > 0;
+    if (!sub) return { submit_temas: 0, submit_meratus: 0 };
+    if (!hasT && !hasM) return { submit_temas: sub, submit_meratus: 0 }; // data tanpa rincian pelayaran: harga tersimpan dianggap Temas
+    const margin = Math.max(0, Math.floor((sub - tem) / 10000) * 10000);
+    return { submit_temas: hasT ? sub : 0, submit_meratus: hasM && mer > 0 ? round10k(mer + margin) : 0 };
+}
 const isPtpFamily = (svc) => svc === 'port_to_port' || svc === 'port_to_door';
 
 router.use(requireAuth);
@@ -114,6 +126,8 @@ router.get('/get-costs', (req, res) => {
             const dtp = queryAll(`SELECT * FROM master_biaya_sea WHERE origin_kecamatan = ? AND destination_kecamatan = ? AND service_type = 'door_to_port' ORDER BY id`, [origin_kecamatan, dest_kecamatan]);
             if (dtp.length) return res.json(dtp.map(r => derivePortToPort(r, svc)));
         }
+        // Laut: harga per pelayaran (Temas / Meratus) sesuai Excel; tidak ada di Excel = 0
+        if (type === 'sea') rows.forEach(r => Object.assign(r, seaCarrierPrices(r)));
         res.json(rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
