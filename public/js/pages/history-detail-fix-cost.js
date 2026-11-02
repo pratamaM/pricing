@@ -25,8 +25,8 @@ function fcExtraBlock(d) {
         ['Multi Drop', Number(d.multidrop_points) > 0 ? `Ya (${Number(d.multidrop_points)} titik tambahan)` : 'Tidak'],
         ['Perlu Kawalan', Number(d.kawalan) ? 'Ya' : 'Tidak']
     ];
-    if (payer(d.tkbm_dtp)) rows.push(['TKBM Door to Port ditanggung', payer(d.tkbm_dtp)]);
-    if (payer(d.tkbm_ptd)) rows.push(['TKBM Port to Door ditanggung', payer(d.tkbm_ptd)]);
+    if (payer(d.tkbm_dtp)) rows.push(['TKBM Origin ditanggung', payer(d.tkbm_dtp)]);
+    if (payer(d.tkbm_ptd)) rows.push(['TKBM Destination ditanggung', payer(d.tkbm_ptd)]);
     let lines = [];
     try { lines = JSON.parse(d.additional_detail || '[]'); } catch (e) { lines = []; }
     return `

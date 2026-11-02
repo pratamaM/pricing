@@ -106,12 +106,12 @@ function renderHitungFixCost() {
                             <div id="q-kawalan-n" class="hidden mt-2"><input type="number" id="q-kawalan-amt" min="0" step="any" placeholder="Rp" class="w-36 border-gray-300 rounded-lg p-2 border text-sm focus:ring-2 focus:ring-blue-500 outline-none"></div>
                         </div>
                         <div id="q-tkbm-dtp" class="hidden">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">TKBM Door to Port ditanggung siapa? (opsional)</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">TKBM Origin (opsional)</label>
                             <select id="q-tkbm-dtp-who" class="w-full border-gray-300 rounded-lg p-2 border text-sm focus:ring-2 focus:ring-blue-500 outline-none"><option value="">Tidak dipilih</option><option value="customer">Customer</option><option value="perusahaan">Perusahaan</option></select>
                             <div id="q-tkbm-dtp-n" class="hidden mt-2"><input type="number" id="q-tkbm-dtp-amt" min="0" step="any" placeholder="Rp" class="w-36 border-gray-300 rounded-lg p-2 border text-sm focus:ring-2 focus:ring-blue-500 outline-none"></div>
                         </div>
                         <div id="q-tkbm-ptd" class="hidden">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">TKBM Port to Door ditanggung siapa? (opsional)</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">TKBM Destination (opsional)</label>
                             <select id="q-tkbm-ptd-who" class="w-full border-gray-300 rounded-lg p-2 border text-sm focus:ring-2 focus:ring-blue-500 outline-none"><option value="">Tidak dipilih</option><option value="customer">Customer</option><option value="perusahaan">Perusahaan</option></select>
                             <div id="q-tkbm-ptd-n" class="hidden mt-2"><input type="number" id="q-tkbm-ptd-amt" min="0" step="any" placeholder="Rp" class="w-36 border-gray-300 rounded-lg p-2 border text-sm focus:ring-2 focus:ring-blue-500 outline-none"></div>
                         </div>
@@ -280,8 +280,8 @@ const HFC_JASA = {
     multipickup: 'Multi Pickup (per titik)',
     multidrop: 'Multi Drop (per titik)',
     kawalan: 'Kawalan',
-    tkbm_dtp: 'TKBM Door to Port',
-    tkbm_ptd: 'TKBM Port to Door'
+    tkbm_dtp: 'TKBM Origin',
+    tkbm_ptd: 'TKBM Destination'
 };
 
 function hfcRefreshQuestions() {

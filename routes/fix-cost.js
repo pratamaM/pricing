@@ -65,12 +65,12 @@ router.post('/create', (req, res) => {
             if (!['customer', 'perusahaan'].includes(v)) throw Object.assign(new Error(`${label} harus customer atau perusahaan`), { status: 400 });
             return v;
         };
-        const tkbmDtp = transport_type === 'sea' ? payer(req.body.tkbm_dtp, 'TKBM Door to Port', false) : null;
-        const tkbmPtd = transport_type === 'sea' ? payer(req.body.tkbm_ptd, 'TKBM Port to Door', false) : null;
+        const tkbmDtp = transport_type === 'sea' ? payer(req.body.tkbm_dtp, 'TKBM Origin', false) : null;
+        const tkbmPtd = transport_type === 'sea' ? payer(req.body.tkbm_ptd, 'TKBM Destination', false) : null;
 
         // Semua jasa OPSIONAL dan tidak punya master: nominal diisi langsung per pengiriman.
         // jasa_amounts: nominal per satuan untuk jasa bawaan yang dipilih; extra_jasa: [{name, amount}] jasa lain.
-        const JASA_NAMES = { multipickup: 'Multi Pickup (per titik)', multidrop: 'Multi Drop (per titik)', kawalan: 'Kawalan', tkbm_dtp: 'TKBM Door to Port', tkbm_ptd: 'TKBM Port to Door' };
+        const JASA_NAMES = { multipickup: 'Multi Pickup (per titik)', multidrop: 'Multi Drop (per titik)', kawalan: 'Kawalan', tkbm_dtp: 'TKBM Origin', tkbm_ptd: 'TKBM Destination' };
         const ov = (req.body.jasa_amounts && typeof req.body.jasa_amounts === 'object') ? req.body.jasa_amounts : {};
         const toAmount = (raw, label) => {
             const n = (raw === undefined || raw === null || raw === '') ? NaN : Number(raw);
