@@ -110,11 +110,6 @@ function renderHitungFixCost() {
                             <select id="q-tkbm-dtp-who" class="w-full border-gray-300 rounded-lg p-2 border text-sm focus:ring-2 focus:ring-blue-500 outline-none"><option value="">Tidak dipilih</option><option value="customer">Customer</option><option value="perusahaan">Perusahaan</option></select>
                             <div id="q-tkbm-dtp-n" class="hidden mt-2"><input type="number" id="q-tkbm-dtp-amt" min="0" step="any" placeholder="Rp" class="w-36 border-gray-300 rounded-lg p-2 border text-sm focus:ring-2 focus:ring-blue-500 outline-none"></div>
                         </div>
-                        <div id="q-trk-ptd" class="hidden md:col-span-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Biaya trucking tujuan <span class="text-red-500">*</span> <span class="font-normal text-gray-500">(pelabuhan tujuan → alamat tujuan, per truk)</span></label>
-                            <input type="number" id="q-trk-ptd-amt" min="0" step="any" placeholder="Rp per truk" class="w-48 border-gray-300 rounded-lg p-2 border text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                            <p class="text-xs text-gray-500 mt-1">Tidak ada di master Excel, jadi diisi di sini. Ditambahkan langsung ke harga Port to Port.</p>
-                        </div>
                         <div id="q-tkbm-ptd" class="hidden">
                             <label class="block text-sm font-medium text-gray-700 mb-1">TKBM Port to Door ditanggung siapa? (opsional)</label>
                             <select id="q-tkbm-ptd-who" class="w-full border-gray-300 rounded-lg p-2 border text-sm focus:ring-2 focus:ring-blue-500 outline-none"><option value="">Tidak dipilih</option><option value="customer">Customer</option><option value="perusahaan">Perusahaan</option></select>
@@ -233,7 +228,7 @@ async function renderHitungFixCostInit() {
             hfcUpdateSummary();
         });
     }
-    ['q-multipickup-points', 'q-multipickup-amt', 'q-multidrop-points', 'q-multidrop-amt', 'q-kawalan-amt', 'q-tkbm-dtp-amt', 'q-tkbm-ptd-amt', 'q-trk-ptd-amt', 'truck-count'].forEach(id => {
+    ['q-multipickup-points', 'q-multipickup-amt', 'q-multidrop-points', 'q-multidrop-amt', 'q-kawalan-amt', 'q-tkbm-dtp-amt', 'q-tkbm-ptd-amt', 'truck-count'].forEach(id => {
         const el = document.getElementById(id);
         el.addEventListener('input', hfcUpdateSummary);
         el.addEventListener('change', hfcUpdateSummary);
@@ -286,16 +281,13 @@ const HFC_JASA = {
     multidrop: 'Multi Drop (per titik)',
     kawalan: 'Kawalan',
     tkbm_dtp: 'TKBM Door to Port',
-    tkbm_ptd: 'TKBM Port to Door',
-    trucking_ptd: 'Trucking Port to Door (tujuan)'
+    tkbm_ptd: 'TKBM Port to Door'
 };
 
 function hfcRefreshQuestions() {
     const type = hfcType(), svc = hfcService();
     document.getElementById('q-tkbm-dtp').classList.toggle('hidden', type !== 'sea');
     document.getElementById('q-tkbm-ptd').classList.toggle('hidden', type !== 'sea');
-    document.getElementById('q-trk-ptd').classList.toggle('hidden', type !== 'sea');
-    document.getElementById('q-trk-ptd-amt').value = '';
     document.getElementById('ton-req').classList.toggle('hidden', type !== 'land'); // berat wajib untuk darat
 
     for (const id of ['q-multipickup', 'q-multidrop', 'q-kawalan']) document.getElementById(id).checked = false;
@@ -336,7 +328,6 @@ function hfcAdditional() {
     if (document.getElementById('q-multidrop').checked) add(HFC_JASA.multidrop, pts('q-multidrop-points'), num('q-multidrop-amt'));
     if (document.getElementById('q-kawalan').checked) add(HFC_JASA.kawalan, 1, num('q-kawalan-amt'));
     if (type === 'sea') {
-        add(HFC_JASA.trucking_ptd, 1, num('q-trk-ptd-amt'));
         if (document.getElementById('q-tkbm-dtp-who').value === 'perusahaan') add(HFC_JASA.tkbm_dtp, 1, num('q-tkbm-dtp-amt'));
         if (document.getElementById('q-tkbm-ptd-who').value === 'perusahaan') add(HFC_JASA.tkbm_ptd, 1, num('q-tkbm-ptd-amt'));
     }
@@ -572,7 +563,6 @@ function cekBiaya() {
     if (type === 'land' && (isNaN(ton) || ton <= 0)) { App.showToast('Berat (tonase) wajib diisi untuk pengiriman darat (lebih dari 0)', 'warning'); return; }
     const trucks = Number(document.getElementById('truck-count').value);
     if (!Number.isInteger(trucks) || trucks < 1) { App.showToast('Jumlah truk minimal 1 (bilangan bulat)', 'warning'); return; }
-    if (type === 'sea' && document.getElementById('q-trk-ptd-amt').value === '') { App.showToast('Isi biaya trucking tujuan (per truk)', 'warning'); return; }
 
     hfcCurrentRow = row;
     hfcCurrentCostId = row.id;
@@ -675,7 +665,6 @@ async function submitFixCost() {
     take('multipickup', document.getElementById('q-multipickup').checked, 'q-multipickup-amt');
     take('multidrop', document.getElementById('q-multidrop').checked, 'q-multidrop-amt');
     take('kawalan', document.getElementById('q-kawalan').checked, 'q-kawalan-amt');
-    take('trucking_ptd', type === 'sea', 'q-trk-ptd-amt');
     take('tkbm_dtp', type === 'sea' && tkbmDtp === 'perusahaan', 'q-tkbm-dtp-amt');
     take('tkbm_ptd', type === 'sea' && tkbmPtd === 'perusahaan', 'q-tkbm-ptd-amt');
     const extraJasa = [];
