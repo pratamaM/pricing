@@ -8,6 +8,15 @@ let hfcTariffKind = 'land';
 function renderHitungFixCost() {
     return `
     <div class="max-w-5xl mx-auto space-y-6">
+        <!-- Urutan pengisian -->
+        <div id="hfc-steps" class="bg-white rounded-xl shadow-sm border border-gray-100 px-6 py-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <div id="step-1" class="hfc-step flex items-center gap-2 text-sm"><span class="hfc-step-n w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold bg-gray-200 text-gray-600">1</span><span class="hfc-step-t text-gray-500">Pilih Origin &amp; Destination</span></div>
+            <i data-lucide="chevron-right" class="w-4 h-4 text-gray-300 hidden sm:block"></i>
+            <div id="step-2" class="hfc-step flex items-center gap-2 text-sm"><span class="hfc-step-n w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold bg-gray-200 text-gray-600">2</span><span class="hfc-step-t text-gray-500">Isi Detail Pengiriman</span></div>
+            <i data-lucide="chevron-right" class="w-4 h-4 text-gray-300 hidden sm:block"></i>
+            <div id="step-3" class="hfc-step flex items-center gap-2 text-sm"><span class="hfc-step-n w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold bg-gray-200 text-gray-600">3</span><span class="hfc-step-t text-gray-500">Cek Biaya &amp; Diskon</span></div>
+        </div>
+
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h3 class="text-lg font-semibold text-gray-800 mb-6 border-b pb-4">Cari Route Cost</h3>
             
@@ -66,6 +75,12 @@ function renderHitungFixCost() {
         </div>
 
         <!-- Detail pengiriman (diisi dulu, baru Cek Biaya) -->
+        <!-- Panduan selama detail pengiriman belum muncul -->
+        <div id="detail-hint" class="rounded-xl border-2 border-dashed border-gray-300 bg-white px-6 py-8 text-center">
+            <p class="text-sm font-medium text-gray-700 mb-1">Detail pengiriman akan muncul di sini</p>
+            <p id="detail-hint-text" class="text-sm text-gray-500">Pilih <b>Origin</b> dan <b>Destination</b> sampai tingkat <b>Kecamatan</b> terlebih dahulu.</p>
+        </div>
+
         <div id="detail-panel" class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hidden">
             <h3 class="text-lg font-semibold text-gray-800 mb-6 border-b pb-4">Detail Pengiriman</h3>
             <!-- Detail pengiriman: diisi sebelum Cek Biaya -->
@@ -211,6 +226,7 @@ async function renderHitungFixCostInit() {
             loadLocations(el.value);
             hfcHidePanels();
             hfcTariffs = [];
+            hfcSetStep(1, 'Pilih <b>Origin</b> dan <b>Destination</b> sampai tingkat <b>Kecamatan</b> terlebih dahulu.');
         });
     });
     
@@ -241,7 +257,7 @@ async function renderHitungFixCostInit() {
     document.getElementById('btn-cek-biaya').addEventListener('click', cekBiaya);
     // Origin/Destination berubah -> muat type truk rute itu; pilihan type truk/pelayaran berubah -> harga perlu dicek ulang
     for (const id of ['orig-prov', 'orig-kota', 'orig-kec', 'dest-prov', 'dest-kota', 'dest-kec']) document.getElementById(id).addEventListener('change', hfcOnRouteChange);
-    document.getElementById('container-type').addEventListener('change', () => document.getElementById('cost-panel').classList.add('hidden'));
+    document.getElementById('container-type').addEventListener('change', hfcStale);
     
     // Diskon: pilih dulu persentase atau nominal, baru isi nilainya
     document.querySelectorAll('input[name="disc_mode"]').forEach(el => {
@@ -250,12 +266,13 @@ async function renderHitungFixCostInit() {
     document.getElementById('disc-percent').addEventListener('input', hfcUpdateSummary);
     document.getElementById('disc-rp').addEventListener('input', hfcUpdateSummary);
     
-    document.getElementById('tariff-select').addEventListener('change', () => document.getElementById('cost-panel').classList.add('hidden'));
+    document.getElementById('tariff-select').addEventListener('change', hfcStale);
     document.getElementById('btn-submit-fix-cost').addEventListener('click', submitFixCost);
     
     document.getElementById('q-extra-add').addEventListener('click', hfcAddExtraRow);
     
     // Initial load
+    hfcSetStep(1);
     hfcApplyTypeUi();
     loadLocations('land');
 }
@@ -499,6 +516,25 @@ function setupCascading(prefix) {
 
 let hfcRouteToken = 0;
 
+// Type truck / pelayaran berubah setelah Cek Biaya: hasil lama disembunyikan, kembali ke langkah 2
+function hfcStale() {
+    if (!document.getElementById('cost-panel').classList.contains('hidden')) { document.getElementById('cost-panel').classList.add('hidden'); hfcSetStep(2); }
+}
+
+// Penunjuk langkah + kotak panduan
+function hfcSetStep(n, hint) {
+    document.querySelectorAll('.hfc-step').forEach(el => {
+        const i = Number(el.id.replace('step-', ''));
+        const num = el.querySelector('.hfc-step-n'), txt = el.querySelector('.hfc-step-t');
+        num.className = 'hfc-step-n w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ' + (i < n ? 'bg-green-500 text-white' : i === n ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600');
+        txt.className = 'hfc-step-t ' + (i === n ? 'text-gray-900 font-medium' : i < n ? 'text-gray-700' : 'text-gray-500');
+        num.textContent = i < n ? '\u2713' : String(i);
+    });
+    const box = document.getElementById('detail-hint');
+    box.classList.toggle('hidden', n >= 2);
+    if (hint) document.getElementById('detail-hint-text').innerHTML = hint;
+}
+
 function hfcHidePanels() {
     document.getElementById('detail-panel').classList.add('hidden');
     document.getElementById('cost-panel').classList.add('hidden');
@@ -511,7 +547,10 @@ async function hfcOnRouteChange() {
     const dkec = document.getElementById('dest-kec').value;
     hfcHidePanels();
     hfcTariffs = [];
-    if (!okec || !dkec) return;
+    if (!okec || !dkec) {
+        hfcSetStep(1, !okec ? 'Pilih <b>Origin</b> sampai tingkat <b>Kecamatan</b> (Provinsi \u2192 Kota \u2192 Kecamatan).' : 'Origin sudah dipilih. Sekarang pilih <b>Destination</b> sampai tingkat <b>Kecamatan</b>.');
+        return;
+    }
 
     const token = ++hfcRouteToken;
     try {
@@ -520,12 +559,14 @@ async function hfcOnRouteChange() {
         if (token !== hfcRouteToken) return; // pilihan sudah berganti
         if (!rows || rows.length === 0) {
             App.showToast('Route tidak ditemukan di Master Biaya', 'error');
+            hfcSetStep(1, 'Route ini <b>tidak ditemukan</b> di Master Biaya. Coba pilih Origin atau Destination lain.');
             return;
         }
         // Darat: baris yang biayanya belum diisi tidak bisa dipilih. Laut: perlu harga Temas atau Meratus.
         const priced = rows.filter(r => type === 'land' ? (Number(r.total) || 0) > 0 : ((Number(r.submit_temas) || 0) > 0 || (Number(r.submit_meratus) || 0) > 0));
         if (priced.length === 0) {
             App.showToast('Biaya route ini belum diisi di Master Biaya. Lengkapi dulu lewat Master Biaya > Edit.', 'warning');
+            hfcSetStep(1, 'Biaya route ini <b>belum diisi</b> di Master Biaya. Lengkapi dulu lewat Master Biaya &gt; Edit.');
             return;
         }
         hfcTariffs = priced;
@@ -542,6 +583,7 @@ async function hfcOnRouteChange() {
         hfcRefreshQuestions();
         hfcRenderTariffs();
         document.getElementById('detail-panel').classList.remove('hidden');
+        hfcSetStep(2);
     } catch (e) {
         if (token === hfcRouteToken) App.showToast('Route tidak ditemukan di Master Biaya', 'error');
     }
@@ -571,6 +613,7 @@ function cekBiaya() {
 
     hfcResetDiscount();
     document.getElementById('cost-panel').classList.remove('hidden');
+    hfcSetStep(3);
     hfcUpdateSummary();
     document.getElementById('cost-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
