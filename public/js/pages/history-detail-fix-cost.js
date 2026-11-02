@@ -70,6 +70,12 @@ function fcTrailStep(label, a, waiting, last) {
     return fcTrailRow(circle, icon, title, label, lines, last);
 }
 
+// Saat memproses: tombol dikunci & diganti spinner, lalu halaman dimuat ulang dengan data terbaru
+function fcLockAction() {
+    const panel = document.getElementById('action-panel');
+    if (panel) panel.innerHTML = '<div class="flex items-center justify-center gap-3 py-4 text-gray-500"><div class="spinner w-5 h-5 border-2"></div> Memproses...</div>';
+}
+
 async function renderHistoryDetailFixCostInit(params) {
     document.getElementById('btn-back').addEventListener('click', () => App.loadPage('history-fix-cost'));
     
@@ -83,9 +89,10 @@ async function renderHistoryDetailFixCostInit(params) {
         let actionPanel = '';
         const role = App.user?.role;
         
-        if (fcCanAct(role, data.status)) {
+        const actedByMe = (data.approvals || []).some(x => Number(x.approver_id) === Number(App.user && App.user.id));
+        if (fcCanAct(role, data.status) && !actedByMe) {
             actionPanel = `
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mt-6">
+            <div id="action-panel" class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mt-6">
                 <h3 class="text-lg font-semibold text-gray-800 mb-4">Take Action</h3>
                 <textarea id="action-notes" rows="3" class="w-full border-gray-300 rounded-lg p-2.5 border focus:ring-2 focus:ring-blue-500 outline-none mb-4" placeholder="Optional notes..."></textarea>
                 <div class="flex gap-3">
@@ -221,16 +228,17 @@ async function renderHistoryDetailFixCostInit(params) {
         if (actionPanel) {
             document.getElementById('btn-approve').addEventListener('click', async () => {
                 const notes = document.getElementById('action-notes').value;
+                fcLockAction();
                 try {
                     await App.api(`/fix-cost/approve/${params.id}`, {
                         method: 'POST',
                         body: JSON.stringify({ notes })
                     });
                     App.showToast('Approved', 'success');
-                    App.loadPage('history-detail-fix-cost', params);
                 } catch(e) {
                     App.showToast(e.message, 'error');
                 }
+                App.loadPage('history-detail-fix-cost', params);
             });
             
             document.getElementById('btn-reject').addEventListener('click', async () => {
@@ -239,16 +247,17 @@ async function renderHistoryDetailFixCostInit(params) {
                     App.showToast('Notes is required for rejection', 'warning');
                     return;
                 }
+                fcLockAction();
                 try {
                     await App.api(`/fix-cost/reject/${params.id}`, {
                         method: 'POST',
                         body: JSON.stringify({ notes })
                     });
                     App.showToast('Rejected', 'success');
-                    App.loadPage('history-detail-fix-cost', params);
                 } catch(e) {
                     App.showToast(e.message, 'error');
                 }
+                App.loadPage('history-detail-fix-cost', params);
             });
         }
         

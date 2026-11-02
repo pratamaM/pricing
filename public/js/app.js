@@ -8,6 +8,7 @@ const App = {
             const res = await fetch('api' + url, {
                 headers: { 'Content-Type': 'application/json', ...options.headers },
                 credentials: 'include',
+                cache: 'no-store',
                 ...options
             });
             const data = await res.json();

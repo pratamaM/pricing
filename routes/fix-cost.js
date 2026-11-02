@@ -126,8 +126,8 @@ router.get('/list', (req, res) => {
     try {
         const role = req.session.role;
         const userId = req.session.userId;
-        let query = 'SELECT f.*, u.name as requester_name FROM fix_cost_requests f JOIN users u ON f.requester_id = u.id';
-        let params = [];
+        let query = 'SELECT f.*, u.name as requester_name, (SELECT COUNT(*) FROM fix_cost_approvals a WHERE a.fix_cost_request_id = f.id AND a.approver_id = ?) AS acted_by_me FROM fix_cost_requests f JOIN users u ON f.requester_id = u.id';
+        let params = [userId];
         
         if (role === 'user') {
             query += ' WHERE f.requester_id = ?';
@@ -170,6 +170,8 @@ router.post('/approve/:id', (req, res) => {
         const request = queryGet('SELECT status FROM fix_cost_requests WHERE id = ?', [id]);
         if (!request) return res.status(404).json({ error: 'Not found' });
         
+        const done = queryGet('SELECT COUNT(*) AS c FROM fix_cost_approvals WHERE fix_cost_request_id = ? AND approver_id = ?', [id, req.session.userId]);
+        if (done && done.c > 0) return res.status(403).json({ error: 'Anda sudah memproses pengajuan ini' });
         const st = stageFor(role, request.status);
         if (!st) return res.status(403).json({ error: 'Invalid state for approval' });
         const newStatus = st.approved;
@@ -193,6 +195,8 @@ router.post('/reject/:id', (req, res) => {
         if (!request) return res.status(404).json({ error: 'Not found' });
 
         // Reject hanya boleh oleh approver yang gilirannya (atau superadmin), sama seperti approve
+        const done = queryGet('SELECT COUNT(*) AS c FROM fix_cost_approvals WHERE fix_cost_request_id = ? AND approver_id = ?', [id, req.session.userId]);
+        if (done && done.c > 0) return res.status(403).json({ error: 'Anda sudah memproses pengajuan ini' });
         const st = stageFor(role, request.status);
         if (!st) return res.status(403).json({ error: 'Invalid state for rejection' });
         const newStatus = st.rejected;

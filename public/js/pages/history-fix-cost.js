@@ -89,7 +89,7 @@ async function renderHistoryFixCostInit() {
             const role = App.user?.role;
             let actionBtns = `<button onclick="App.loadPage('history-detail-fix-cost', {id: '${Number(item.id)}'})" class="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded border border-blue-200 text-xs font-medium transition">Detail</button>`;
             
-            if (fcCanAct(role, item.status)) {
+            if (fcCanAct(role, item.status) && !Number(item.acted_by_me)) {
                 actionBtns += `
                     <button onclick="approveFixCost('${Number(item.id)}')" class="ml-1 text-green-600 hover:bg-green-50 px-2 py-1 rounded border border-green-200 text-xs font-medium transition" title="Approve"><i data-lucide="check" class="w-4 h-4"></i></button>
                     <button onclick="rejectFixCost('${Number(item.id)}')" class="ml-1 text-red-600 hover:bg-red-50 px-2 py-1 rounded border border-red-200 text-xs font-medium transition" title="Reject"><i data-lucide="x" class="w-4 h-4"></i></button>
@@ -118,31 +118,39 @@ async function renderHistoryFixCostInit() {
     }
 }
 
+// Ganti tombol aksi pada baris dengan indikator "Memproses..." supaya tidak diklik dua kali
+function fcBusyCell(ev) {
+    const cell = ev && ev.currentTarget ? ev.currentTarget.closest('td') : null;
+    if (cell) cell.innerHTML = '<span class="inline-flex items-center gap-2 text-xs text-gray-500"><span class="spinner w-4 h-4 border-2"></span> Memproses...</span>';
+}
+
 window.approveFixCost = async function(id) {
     if (!confirm('Approve pengajuan ini?')) return;
+    fcBusyCell(window.event);
     try {
         await App.api(`/fix-cost/approve/${id}`, {
             method: 'POST',
             body: JSON.stringify({ notes: 'Approved via quick action' })
         });
         App.showToast('Berhasil di-approve', 'success');
-        App.loadPage('history-fix-cost');
     } catch(e) {
         App.showToast(e.message, 'error');
     }
+    App.loadPage('history-fix-cost'); // muat ulang (dengan spinner) agar status & tombol sesuai data terbaru
 }
 
 window.rejectFixCost = async function(id) {
     const notes = prompt('Alasan penolakan:');
     if (notes === null) return;
+    fcBusyCell(window.event);
     try {
         await App.api(`/fix-cost/reject/${id}`, {
             method: 'POST',
             body: JSON.stringify({ notes: notes })
         });
         App.showToast('Berhasil ditolak', 'success');
-        App.loadPage('history-fix-cost');
     } catch(e) {
         App.showToast(e.message, 'error');
     }
+    App.loadPage('history-fix-cost');
 }
