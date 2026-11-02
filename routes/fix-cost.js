@@ -113,12 +113,12 @@ router.post('/create', (req, res) => {
             (request_number, requester_id, transport_type, origin_provinsi, origin_kota, origin_kecamatan, destination_provinsi, destination_kota, destination_kecamatan, original_cost, discount_percentage, discount_amount, fix_cost, notes, truck_type, container_type, tonnage,
              service_type, gudang_muat, gudang_bongkar, truck_count, multipickup_points, multidrop_points, kawalan, tkbm_dtp, tkbm_ptd, additional_cost, additional_detail, total_cost)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [reqNum, req.session.userId, transport_type, origin_provinsi, origin_kota, origin_kecamatan, destination_provinsi, destination_kota, destination_kecamatan, original_cost, discount_percentage ?? 0, discount_amount ?? 0, fix_cost, notes ?? '', truckType, containerType, ton,
+        `, [reqNum, req.session.userId, transport_type, origin_provinsi ?? null, origin_kota, origin_kecamatan, destination_provinsi ?? null, destination_kota, destination_kecamatan, original_cost, discount_percentage ?? 0, discount_amount ?? 0, fix_cost, notes ?? '', truckType, containerType, ton,
             serviceType, gudangClean(req.body.gudang_muat), gudangClean(req.body.gudang_bongkar), truckCount, mpPoints, mdPoints, kawalan, tkbmDtp, tkbmPtd, additionalCost, JSON.stringify(detail), totalCost]);
 
         res.json({ id: getLastInsertId(), request_number: reqNum, additional_cost: additionalCost, total_cost: totalCost });
     } catch (err) {
-        res.status(err && err.status ? err.status : 500).json({ error: err.message });
+        res.status(err && err.status ? err.status : 500).json({ error: (err && err.message) || String(err) });
     }
 });
 

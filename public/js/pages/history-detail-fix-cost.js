@@ -40,26 +40,34 @@ function fcExtraBlock(d) {
 }
 
 // Satu langkah di Approval Trail. a = baris approval (atau undefined), waiting = sedang menunggu tingkat ini
-function fcTrailStep(label, a, waiting) {
+// Satu baris timeline: kolom ikon (lingkaran + garis penghubung) dan kolom teks, sejajar rapi
+function fcTrailRow(circle, icon, titleCls, title, lines, last) {
+    return `
+        <div class="flex gap-3">
+            <div class="flex flex-col items-center">
+                <div class="flex items-center justify-center w-8 h-8 rounded-full ${circle} text-white shrink-0 shadow-sm">
+                    <i data-lucide="${icon}" class="w-4 h-4"></i>
+                </div>
+                ${last ? '' : '<div class="w-0.5 flex-1 bg-slate-200 my-1 min-h-[1.5rem]"></div>'}
+            </div>
+            <div class="${last ? '' : 'pb-5'} pt-1 min-w-0">
+                <p class="text-sm font-bold ${titleCls} leading-tight">${title}</p>
+                ${lines.filter(Boolean).map(l => l).join('')}
+            </div>
+        </div>`;
+}
+
+function fcTrailStep(label, a, waiting, last) {
     const approved = a && a.action === 'approve';
     const circle = a ? (approved ? 'bg-green-500' : 'bg-red-500') : (waiting ? 'bg-yellow-500' : 'bg-slate-300');
     const icon = a ? (approved ? 'check' : 'x') : (waiting ? 'clock' : 'circle');
     const title = a ? 'text-slate-900' : (waiting ? 'text-yellow-700' : 'text-slate-400');
-    return `
-        <div class="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group">
-            <div class="flex items-center justify-center w-6 h-6 rounded-full border border-white ${circle} text-white shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow absolute -left-3 z-10">
-                <i data-lucide="${icon}" class="w-3 h-3"></i>
-            </div>
-            <div class="w-full">
-                <div class="flex flex-col">
-                    <span class="text-sm font-bold ${title}">${label}</span>
-                    ${a ? `
-                        <span class="text-xs text-slate-500">${App.esc(a.approver_name || '')} - ${App.esc(fcDate(a.created_at, true))}${approved ? '' : ' (ditolak)'}</span>
-                        ${a.notes ? `<span class="text-xs text-slate-600 mt-1 italic">"${App.esc(a.notes)}"</span>` : ''}
-                    ` : (waiting ? '<span class="text-xs text-yellow-600">Waiting...</span>' : '')}
-                </div>
-            </div>
-        </div>`;
+    const lines = a ? [
+        `<p class="text-xs text-slate-500 mt-1">${App.esc(a.approver_name || '')}${approved ? '' : ' (ditolak)'}</p>`,
+        `<p class="text-xs text-slate-400">${App.esc(fcDate(a.created_at, true))}</p>`,
+        a.notes ? `<p class="text-xs text-slate-600 mt-1 italic">"${App.esc(a.notes)}"</p>` : ''
+    ] : [waiting ? '<p class="text-xs text-yellow-600 mt-1">Menunggu keputusan...</p>' : ''];
+    return fcTrailRow(circle, icon, title, label, lines, last);
 }
 
 async function renderHistoryDetailFixCostInit(params) {
@@ -140,8 +148,6 @@ async function renderHistoryDetailFixCostInit(params) {
                     <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
                         ${[
                             ['Layanan', serviceLabel(data.service_type || (data.transport_type === 'land' ? 'door_to_door' : null))],
-                            ['Gudang Muat', data.gudang_muat || '-'],
-                            ['Gudang Bongkar', data.gudang_bongkar || '-'],
                             ['Jumlah Truk', data.truck_count || 1]
                         ].map(([l, v]) => `
                         <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
@@ -198,21 +204,11 @@ async function renderHistoryDetailFixCostInit(params) {
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sticky top-6">
                     <h3 class="text-lg font-semibold text-gray-800 mb-6 border-b pb-4">Approval Trail</h3>
                     
-                    <div class="relative pl-6 space-y-6 before:absolute before:inset-0 before:ml-2.5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-300 before:to-transparent">
-                        <div class="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                            <div class="flex items-center justify-center w-6 h-6 rounded-full border border-white bg-green-500 text-white shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow absolute -left-3 z-10">
-                                <i data-lucide="check" class="w-3 h-3"></i>
-                            </div>
-                            <div class="w-full">
-                                <div class="flex flex-col">
-                                    <span class="text-sm font-bold text-slate-900">Created by ${App.esc(data.requester_name || 'User')}</span>
-                                    <span class="text-xs text-slate-500">${App.esc(dateStr)}</span>
-                                </div>
-                            </div>
-                        </div>
-                        ${fcTrailStep('Supervisor Approval', byLevel.supervisor, data.status === 'pending')}
-                        ${fcTrailStep('Atasan Approval (Final)', byLevel.atasan, data.status === 'approved_supervisor')}
-                        ${byLevel.admin ? fcTrailStep('Approval Final (data lama)', byLevel.admin, false) : ''}
+                    <div>
+                        ${fcTrailRow('bg-green-500', 'check', 'text-slate-900', `Created by ${App.esc(data.requester_name || 'User')}`, [`<p class="text-xs text-slate-400 mt-1">${App.esc(dateStr)}</p>`], false)}
+                        ${fcTrailStep('Supervisor Approval', byLevel.supervisor, data.status === 'pending', false)}
+                        ${fcTrailStep('Atasan Approval (Final)', byLevel.atasan, data.status === 'approved_supervisor', !byLevel.admin)}
+                        ${byLevel.admin ? fcTrailStep('Approval Final (data lama)', byLevel.admin, false, true) : ''}
                     </div>
                 </div>
                 
