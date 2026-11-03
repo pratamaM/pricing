@@ -85,6 +85,28 @@ router.get('/filter-options', (req, res) => {
     }
 });
 
+router.get('/detail/:id', (req, res) => {
+    try {
+        const type = req.query.type === 'sea' ? 'sea' : 'land';
+        const data = queryGet(`SELECT * FROM master_biaya_${type} WHERE id = ?`, [req.params.id]);
+        if (!data) return res.status(404).json({ error: 'Not found' });
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.get('/stats', (req, res) => {
+    try {
+        const type = req.query.type === 'sea' ? 'sea' : 'land';
+        const valCol = type === 'sea' ? 'submit_value' : 'total';
+        const data = queryAll(`SELECT destination_kota, SUM(${valCol}) as total FROM master_biaya_${type} WHERE destination_kota IS NOT NULL AND destination_kota != '' GROUP BY destination_kota`);
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 router.get('/locations', (req, res) => {
     try {
         const type = req.query.type === 'sea' ? 'sea' : 'land';
