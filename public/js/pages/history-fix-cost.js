@@ -46,17 +46,18 @@ function fcDate(s, withTime) {
 
 function renderHistoryFixCost() {
     return `
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm whitespace-nowrap">
+    <div class="tk-card bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div id="hist-filters"></div>
+        <div class="overflow-x-auto tk-scroll">
+            <table class="tk-table w-full text-left text-sm whitespace-nowrap">
                 <thead class="bg-gray-50 text-gray-600 border-b">
                     <tr>
                         <th class="px-4 py-3 font-medium">No Pengajuan</th>
                         <th class="px-4 py-3 font-medium">Tanggal</th>
                         <th class="px-4 py-3 font-medium">Rute</th>
                         <th class="px-4 py-3 font-medium">Tipe</th>
-                        <th class="px-4 py-3 font-medium">Original Cost</th>
-                        <th class="px-4 py-3 font-medium">Fix Cost</th>
+                        <th class="px-4 py-3 font-medium text-right">Original Cost</th>
+                        <th class="px-4 py-3 font-medium text-right">Fix Cost</th>
                         <th class="px-4 py-3 font-medium">Status</th>
                         <th class="px-4 py-3 font-medium text-center">Aksi</th>
                     </tr>
@@ -66,53 +67,55 @@ function renderHistoryFixCost() {
                 </tbody>
             </table>
         </div>
+        <div id="hist-pager"></div>
     </div>
     `;
 }
 
+function fcRenderRow(item) {
+    const statusBadge = fcBadge(item.status);
+    const dateStr = fcDate(item.created_at);
+    const role = App.user?.role;
+    let actionBtns = `<button onclick="App.loadPage('history-detail-fix-cost', {id: '${Number(item.id)}'})" class="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded border border-blue-200 text-xs font-medium transition">Detail</button>`;
+
+    if (fcCanAct(role, item.status) && !Number(item.acted_by_me)) {
+        actionBtns += `
+            <button onclick="approveFixCost('${Number(item.id)}')" class="ml-1 text-green-600 hover:bg-green-50 px-2 py-1 rounded border border-green-200 text-xs font-medium transition" title="Approve"><i data-lucide="check" class="w-4 h-4 inline"></i></button>
+            <button onclick="rejectFixCost('${Number(item.id)}')" class="ml-1 text-red-600 hover:bg-red-50 px-2 py-1 rounded border border-red-200 text-xs font-medium transition" title="Reject"><i data-lucide="x" class="w-4 h-4 inline"></i></button>`;
+    }
+
+    return `
+    <tr class="hover:bg-gray-50">
+        <td class="px-4 py-3 font-medium text-gray-900">${App.esc(item.request_number)}</td>
+        <td class="px-4 py-3 text-gray-500">${dateStr}</td>
+        <td class="px-4 py-3">${App.esc(item.origin_kota || '-')} <i data-lucide="arrow-right" class="inline w-3 h-3 text-gray-400"></i> ${App.esc(item.destination_kota || '-')}</td>
+        <td class="px-4 py-3 capitalize">${App.esc(item.transport_type)}${fcShipInfo(item) ? `<div class="text-xs text-gray-400 normal-case">${fcShipInfo(item)}</div>` : ''}</td>
+        <td class="px-4 py-3 text-right">${App.formatRp(item.original_cost)}</td>
+        <td class="px-4 py-3 font-medium text-right">${App.formatRp(item.fix_cost)}</td>
+        <td class="px-4 py-3">${fcBadge(item.status)}</td>
+        <td class="px-4 py-3 text-center whitespace-nowrap">${actionBtns}</td>
+    </tr>`;
+}
+
 async function renderHistoryFixCostInit() {
+    const kit = TableKit.mount({
+        filterEl: 'hist-filters', pagerEl: 'hist-pager', tbodyId: 'history-tbody', colspan: 8, pageSize: 10,
+        emptyText: 'Belum ada pengajuan',
+        filters: [
+            { id: 'q', type: 'search', placeholder: 'Cari no pengajuan, rute, truck, pemohon...',
+              match: (r, v) => TableKit.norm([r.request_number, r.origin_kota, r.origin_kecamatan, r.destination_kota, r.destination_kecamatan, r.truck_type, r.container_type, r.requester_name].join(' ')).includes(TableKit.norm(v)) },
+            { id: 'status', type: 'select', label: 'Status', options: Object.entries(FC_STATUS).map(([value, [label]]) => ({ value, label })), match: (r, v) => r.status === v },
+            { id: 'tipe', type: 'select', label: 'Tipe', options: [{ value: 'land', label: 'Darat' }, { value: 'sea', label: 'Laut' }], match: (r, v) => r.transport_type === v },
+            { id: 'from', type: 'date', label: 'Dari tanggal', match: (r, v) => String(r.created_at || '').slice(0, 10) >= v },
+            { id: 'to', type: 'date', label: 'Sampai tanggal', match: (r, v) => String(r.created_at || '').slice(0, 10) <= v }
+        ],
+        renderRow: fcRenderRow
+    });
+    kit.loading();
     try {
         const data = await App.api('/fix-cost/list');
-        const tbody = document.getElementById('history-tbody');
-        
-        if (data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-gray-500"><i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> No data found</td></tr>`;
-            lucide.createIcons();
-            return;
-        }
-        
-        tbody.innerHTML = data.map(item => {
-            const statusBadge = fcBadge(item.status);
-            
-            const dateStr = fcDate(item.created_at);
-            
-            const role = App.user?.role;
-            let actionBtns = `<button onclick="App.loadPage('history-detail-fix-cost', {id: '${Number(item.id)}'})" class="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded border border-blue-200 text-xs font-medium transition">Detail</button>`;
-            
-            if (fcCanAct(role, item.status) && !Number(item.acted_by_me)) {
-                actionBtns += `
-                    <button onclick="approveFixCost('${Number(item.id)}')" class="ml-1 text-green-600 hover:bg-green-50 px-2 py-1 rounded border border-green-200 text-xs font-medium transition" title="Approve"><i data-lucide="check" class="w-4 h-4"></i></button>
-                    <button onclick="rejectFixCost('${Number(item.id)}')" class="ml-1 text-red-600 hover:bg-red-50 px-2 py-1 rounded border border-red-200 text-xs font-medium transition" title="Reject"><i data-lucide="x" class="w-4 h-4"></i></button>
-                `;
-            }
-
-            return `
-            <tr class="hover:bg-gray-50">
-                <td class="px-4 py-3 font-medium text-gray-900">${App.esc(item.request_number)}</td>
-                <td class="px-4 py-3 text-gray-500">${dateStr}</td>
-                <td class="px-4 py-3">${App.esc(item.origin_kota || '-')} <i data-lucide="arrow-right" class="inline w-3 h-3 text-gray-400"></i> ${App.esc(item.destination_kota || '-')}</td>
-                <td class="px-4 py-3 capitalize">${App.esc(item.transport_type)}${fcShipInfo(item) ? `<div class="text-xs text-gray-400 normal-case">${fcShipInfo(item)}</div>` : ''}</td>
-                <td class="px-4 py-3">${App.formatRp(item.original_cost)}</td>
-                <td class="px-4 py-3 font-medium">${App.formatRp(item.fix_cost)}</td>
-                <td class="px-4 py-3">${statusBadge}</td>
-                <td class="px-4 py-3 text-center flex justify-center items-center">
-                    ${actionBtns}
-                </td>
-            </tr>
-            `;
-        }).join('');
-        lucide.createIcons();
-        
+        data.sort((a, b) => Number(b.id) - Number(a.id)); // terbaru di atas
+        kit.setRows(data);
     } catch (e) {
         document.getElementById('history-tbody').innerHTML = `<tr><td colspan="8" class="p-8 text-center text-red-500">Failed to load data</td></tr>`;
     }

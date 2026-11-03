@@ -12,12 +12,6 @@ function renderMasterBiaya() {
             </div>
             
             <div class="flex items-center gap-3 w-full sm:w-auto">
-                <div class="relative w-full sm:w-64">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                        <i data-lucide="search" class="w-4 h-4"></i>
-                    </div>
-                    <input type="text" id="mb-search" placeholder="Search origin / destination..." class="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
-                </div>
                 
                 ${['superadmin', 'admin'].includes(App.user?.role) ? `
                 <a id="btn-template-sea" href="api/upload/template/sea" download class="flex items-center gap-2 border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap" title="Contoh file upload (sheet-sheet master)">
@@ -33,9 +27,10 @@ function renderMasterBiaya() {
             </div>
         </div>
         
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm whitespace-nowrap">
+        <div class="tk-card bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div id="mb-filters"></div>
+            <div class="overflow-x-auto tk-scroll">
+                <table class="tk-table w-full text-left text-sm whitespace-nowrap">
                     <thead class="bg-gray-50 text-gray-600 border-b">
                         <tr id="mb-thead">
                             <!-- Injected by JS -->
@@ -46,18 +41,7 @@ function renderMasterBiaya() {
                     </tbody>
                 </table>
             </div>
-            
-            <!-- Pagination -->
-            <div class="px-4 py-3 border-t flex items-center justify-between bg-gray-50">
-                <div class="text-sm text-gray-500">
-                    Total: <span id="mb-total" class="font-medium text-gray-800">0</span> records
-                </div>
-                <div class="flex items-center gap-2">
-                    <button id="btn-prev" class="px-3 py-1 border border-gray-300 rounded bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50">Prev</button>
-                    <span id="mb-page-info" class="text-sm text-gray-600">Page 1</span>
-                    <button id="btn-next" class="px-3 py-1 border border-gray-300 rounded bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50">Next</button>
-                </div>
-            </div>
+            <div id="mb-pager"></div>
         </div>
     </div>
     `;
@@ -70,28 +54,6 @@ async function renderMasterBiayaInit() {
     
     document.getElementById('tab-land').addEventListener('click', (e) => setMbTab('land', e.currentTarget));
     document.getElementById('tab-sea').addEventListener('click', (e) => setMbTab('sea', e.currentTarget));
-    
-    let searchTimeout;
-    document.getElementById('mb-search').addEventListener('input', (e) => {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-            currentMasterBiayaSearch = e.target.value;
-            currentMasterBiayaPage = 1;
-            loadMasterBiayaData();
-        }, 500);
-    });
-    
-    document.getElementById('btn-prev').addEventListener('click', () => {
-        if (currentMasterBiayaPage > 1) {
-            currentMasterBiayaPage--;
-            loadMasterBiayaData();
-        }
-    });
-    
-    document.getElementById('btn-next').addEventListener('click', () => {
-        currentMasterBiayaPage++;
-        loadMasterBiayaData();
-    });
     
     const fileUpload = document.getElementById('file-upload');
     const btnUpload = document.getElementById('btn-upload');
@@ -120,7 +82,7 @@ async function renderMasterBiayaInit() {
                 const up = await App.apiUpload(`/upload/${currentMasterBiayaType}?replace=1`, formData);
                 App.showToast(`Upload berhasil: ${up.rowsInserted} baris diimpor${up.deleted ? `, ${up.deleted} baris lama dihapus` : ''}`, 'success');
                 if (up.warnings && up.warnings.length) App.showToast(`${up.warnings.length} baris master dilewati: ${up.warnings.slice(0, 3).join(' | ')}${up.warnings.length > 3 ? ' ...' : ''}`, 'warning');
-                loadMasterBiayaData();
+                loadMasterBiayaData(true);
             } catch (err) {
                 App.showToast(err.message, 'error');
             } finally {
@@ -133,7 +95,7 @@ async function renderMasterBiayaInit() {
     }
 
     mbToggleTemplateLink();
-    loadMasterBiayaData();
+    mbInitKit();
 }
 
 // Tombol template mengikuti tab aktif (Darat / Sea)
@@ -155,59 +117,73 @@ function setMbTab(type, btn) {
     btn.className = 'flex-1 sm:flex-none px-6 py-2 rounded-md text-sm font-medium transition-colors bg-white shadow text-gray-800';
     mbToggleTemplateLink();
     
-    loadMasterBiayaData();
+    loadMasterBiayaData(true);
 }
 
-async function loadMasterBiayaData() {
-    const tbody = document.getElementById('mb-tbody');
-    const thead = document.getElementById('mb-thead');
-    
+let mbKit = null;
+
+function mbCanDetail() { return !!App.user && App.user.role !== 'user'; }
+
+function mbRenderHead() {
     // Tabel depan: Origin, Destination, Total Biaya. Rinciannya ada di tombol Detail (kolom Action).
     // Role "user" tidak punya kolom Action.
-    const canDetail = !!App.user && App.user.role !== 'user';
-    const cols = canDetail ? 4 : 3;
-    thead.innerHTML = `
+    document.getElementById('mb-thead').innerHTML = `
         <th class="px-4 py-3 font-medium">Origin</th>
         <th class="px-4 py-3 font-medium">Destination</th>
         <th class="px-4 py-3 font-medium text-right">Total Biaya</th>
-        ${canDetail ? '<th class="px-4 py-3 font-medium text-center">Action</th>' : ''}
-    `;
-    
-    tbody.innerHTML = `<tr><td colspan="${cols}" class="p-8 text-center"><div class="spinner mx-auto border-gray-400"></div></td></tr>`;
-    
+        ${mbCanDetail() ? '<th class="px-4 py-3 font-medium text-center">Action</th>' : ''}`;
+}
+
+function mbRenderRow(item) {
+    const type = currentMasterBiayaType;
+    const origin = [item.origin_provinsi, item.origin_kota, item.origin_kecamatan].filter(Boolean).join(', ');
+    const dest = [item.destination_provinsi, item.destination_kota, item.destination_kecamatan].filter(Boolean).join(', ');
+    // Darat: kolom Total. Laut: nilai SUBMIT (dasar perhitungan di Calculate Cost).
+    const total = type === 'land' ? item.total : item.submit_value;
+    return `
+    <tr class="hover:bg-gray-50">
+        <td class="px-4 py-3">${App.esc(origin || '-')}</td>
+        <td class="px-4 py-3">${App.esc(dest || '-')}</td>
+        <td class="px-4 py-3 font-medium text-right">${App.formatRp(total)}</td>
+        ${mbCanDetail() ? `<td class="px-4 py-3 text-center">
+            <button onclick="App.loadPage('master-detail-biaya', {id: '${Number(item.id)}', type: '${type}'})" class="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded border border-blue-200 text-xs font-medium transition">Detail</button>
+        </td>` : ''}
+    </tr>`;
+}
+
+function mbInitKit() {
+    mbRenderHead();
+    mbKit = TableKit.mount({
+        filterEl: 'mb-filters', pagerEl: 'mb-pager', tbodyId: 'mb-tbody',
+        colspan: mbCanDetail() ? 4 : 3, pageSize: 25, sizes: [10, 25, 50, 100],
+        emptyText: 'Tidak ada data Master Biaya',
+        filters: [
+            { id: 'search', type: 'search', placeholder: 'Cari origin / destination...' },
+            { id: 'origin_provinsi', type: 'select', label: 'Provinsi Origin' },
+            { id: 'destination_provinsi', type: 'select', label: 'Provinsi Destination' },
+            { id: 'truck', type: 'select', label: 'Type Truck' }
+        ],
+        server: async ({ page, size, values }) => {
+            const q = new URLSearchParams({ type: currentMasterBiayaType, page, limit: size, search: values.search || '' });
+            for (const k of ['origin_provinsi', 'destination_provinsi', 'truck']) if (values[k]) q.set(k, values[k]);
+            const res = await App.api(`/master-biaya/list?${q}`);
+            return { rows: res.data, total: res.total };
+        },
+        renderRow: mbRenderRow
+    });
+    loadMasterBiayaData(true);
+}
+
+// reset=true: kosongkan filter (ganti tab / upload baru); false: pertahankan filter & halaman
+async function loadMasterBiayaData(reset) {
+    if (!mbKit) return;
+    mbRenderHead();
+    mbKit.loading();
     try {
-        const type = currentMasterBiayaType;
-        const res = await App.api(`/master-biaya/list?type=${type}&search=${encodeURIComponent(currentMasterBiayaSearch)}&page=${currentMasterBiayaPage}&limit=20`);
-        
-        document.getElementById('mb-total').textContent = res.total;
-        document.getElementById('mb-page-info').textContent = `Page ${currentMasterBiayaPage} of ${Math.ceil(res.total/20) || 1}`;
-        document.getElementById('btn-prev').disabled = currentMasterBiayaPage <= 1;
-        document.getElementById('btn-next').disabled = currentMasterBiayaPage >= Math.ceil(res.total/20);
-        
-        if (res.data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="${cols}" class="p-8 text-center text-gray-500"><i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 opacity-50"></i> No data found</td></tr>`;
-            lucide.createIcons();
-            return;
-        }
-        
-        tbody.innerHTML = res.data.map(item => {
-            const origin = [item.origin_provinsi, item.origin_kota, item.origin_kecamatan].filter(Boolean).join(', ');
-            const dest = [item.destination_provinsi, item.destination_kota, item.destination_kecamatan].filter(Boolean).join(', ');
-            // Darat: kolom Total. Laut: nilai SUBMIT (dasar perhitungan di Hitung Fix Cost).
-            const total = type === 'land' ? item.total : item.submit_value;
-            return `
-            <tr class="hover:bg-gray-50">
-                <td class="px-4 py-3">${App.esc(origin || '-')}</td>
-                <td class="px-4 py-3">${App.esc(dest || '-')}</td>
-                <td class="px-4 py-3 font-medium text-right">${App.formatRp(total)}</td>
-                ${canDetail ? `<td class="px-4 py-3 text-center">
-                    <button onclick="App.loadPage('master-detail-biaya', {id: '${Number(item.id)}', type: '${type}'})" class="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded border border-blue-200 text-xs font-medium transition">Detail</button>
-                </td>` : ''}
-            </tr>`;
-        }).join('');
-        lucide.createIcons();
-        
-    } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="${cols}" class="p-8 text-center text-red-500">Failed to load data</td></tr>`;
-    }
+        const o = await App.api(`/master-biaya/filter-options?type=${currentMasterBiayaType}`);
+        mbKit.setOptions('origin_provinsi', o.origin_provinsi);
+        mbKit.setOptions('destination_provinsi', o.destination_provinsi);
+        mbKit.setOptions('truck', o.truck);
+    } catch (e) { /* dropdown boleh kosong; tabel tetap jalan */ }
+    return reset ? mbKit.reset() : mbKit.reload();
 }

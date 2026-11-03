@@ -76,3 +76,13 @@ body {
 .grid > * { min-width: 0; }
 #main-content { max-width: 100%; }
 canvas { max-width: 100%; }
+
+/* ===== Tabel seragam (TableKit) ===== */
+.tk-table thead th { text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.05em; font-weight: 600; color: #64748b; background: #f8fafc; white-space: nowrap; }
+.tk-table tbody tr { transition: background-color .12s; }
+.tk-table tbody tr:nth-child(even) { background-color: #fcfdfe; }
+.tk-table tbody tr:hover { background-color: #f1f5f9; }
+.tk-table tbody td { vertical-align: middle; }
+/* Header tetap terlihat saat tabel di-scroll */
+.tk-scroll { max-height: calc(100vh - 330px); min-height: 220px; overflow: auto; }
+.tk-scroll .tk-table thead th { position: sticky; top: 0; z-index: 2; box-shadow: 0 1px 0 #e2e8f0; }

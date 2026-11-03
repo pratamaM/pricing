@@ -45,53 +45,41 @@ router.use(requireAuth);
 router.get('/list', (req, res) => {
     try {
         const type = req.query.type === 'sea' ? 'sea' : 'land';
-        const search = req.query.search || '';
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 20;
+        const search = String(req.query.search || '').trim();
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
         const offset = (page - 1) * limit;
-        
         const table = `master_biaya_${type}`;
-        
-        let query = `SELECT * FROM ${table}`;
-        let countQuery = `SELECT COUNT(*) as total FROM ${table}`;
-        let params = [];
-        
+        const truckCol = type === 'sea' ? 'truck_type' : 'type_mobil';
+
+        const where = [], params = [];
         if (search) {
-            const where = ` WHERE destination_provinsi LIKE ? OR destination_kota LIKE ? OR destination_kecamatan LIKE ?
-                OR origin_provinsi LIKE ? OR origin_kota LIKE ? OR origin_kecamatan LIKE ?`;
-            query += where;
-            countQuery += where;
-            params = Array(6).fill(`%${search}%`);
+            where.push(`(destination_provinsi LIKE ? OR destination_kota LIKE ? OR destination_kecamatan LIKE ? OR origin_provinsi LIKE ? OR origin_kota LIKE ? OR origin_kecamatan LIKE ?)`);
+            params.push(...Array(6).fill(`%${search}%`));
         }
-        
-        query += ` LIMIT ? OFFSET ?`;
-        
-        const countRes = queryGet(countQuery, params);
-        const data = queryAll(query, [...params, limit, offset]);
-        
-        res.json({ data, total: countRes.total, page, limit });
+        // Filter tambahan (pilihan dropdown, cocok persis)
+        const eq = (col, v) => { v = String(v || '').trim(); if (v) { where.push(`${col} = ?`); params.push(v); } };
+        eq('origin_provinsi', req.query.origin_provinsi);
+        eq('destination_provinsi', req.query.destination_provinsi);
+        eq(truckCol, req.query.truck);
+        const w = where.length ? ' WHERE ' + where.join(' AND ') : '';
+
+        const total = queryGet(`SELECT COUNT(*) as total FROM ${table}${w}`, params).total;
+        const data = queryAll(`SELECT * FROM ${table}${w} ORDER BY origin_provinsi, origin_kota, destination_kota, id LIMIT ? OFFSET ?`, [...params, limit, offset]);
+        res.json({ data, total, page, limit });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-router.get('/detail/:id', (req, res) => {
+// Pilihan untuk dropdown filter (nilai unik yang ada di data)
+router.get('/filter-options', (req, res) => {
     try {
         const type = req.query.type === 'sea' ? 'sea' : 'land';
-        const data = queryGet(`SELECT * FROM master_biaya_${type} WHERE id = ?`, [req.params.id]);
-        if (!data) return res.status(404).json({ error: 'Not found' });
-        res.json(data);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-router.get('/stats', (req, res) => {
-    try {
-        const type = req.query.type === 'sea' ? 'sea' : 'land';
-        const valCol = type === 'sea' ? 'submit_value' : 'total';
-        const data = queryAll(`SELECT destination_kota, SUM(${valCol}) as total FROM master_biaya_${type} WHERE destination_kota IS NOT NULL AND destination_kota != '' GROUP BY destination_kota`);
-        res.json(data);
+        const table = `master_biaya_${type}`;
+        const truckCol = type === 'sea' ? 'truck_type' : 'type_mobil';
+        const uniq = (col) => queryAll(`SELECT DISTINCT ${col} AS v FROM ${table} WHERE ${col} IS NOT NULL AND ${col} != '' ORDER BY ${col}`).map(r => r.v);
+        res.json({ origin_provinsi: uniq('origin_provinsi'), destination_provinsi: uniq('destination_provinsi'), truck: uniq(truckCol) });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

@@ -1,5 +1,6 @@
 let mkCategory = 'land';
 let mkList = [];
+let mkKit = null;
 
 const mkCanAdd = () => ['superadmin', 'admin'].includes(App.user && App.user.role);
 const mkCanEdit = () => ['superadmin', 'admin'].includes(App.user && App.user.role);
@@ -22,8 +23,10 @@ function renderMasterKendaraan() {
                 <button type="submit" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"><i data-lucide="plus" class="w-4 h-4"></i> Tambah</button>
             </form></div>` : ''}
         </div>
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <table class="w-full text-left text-sm">
+        <div class="tk-card bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div id="mk-filters"></div>
+            <div class="overflow-x-auto tk-scroll">
+            <table class="tk-table w-full text-left text-sm">
                 <thead class="bg-gray-50 text-gray-600 border-b">
                     <tr>
                         <th class="px-6 py-3 font-medium text-left">Nama Kendaraan</th>
@@ -32,6 +35,8 @@ function renderMasterKendaraan() {
                 </thead>
                 <tbody id="mk-tbody" class="divide-y divide-gray-100"></tbody>
             </table>
+            </div>
+            <div id="mk-pager"></div>
         </div>
         <p class="text-xs text-gray-500">Daftar ini dipakai sebagai pilihan Type Truck / Type Container di Master Biaya dan Hitung Fix Cost.</p>
     </div>`;
@@ -39,6 +44,12 @@ function renderMasterKendaraan() {
 
 async function renderMasterKendaraanInit() {
     mkCategory = 'land';
+    mkKit = TableKit.mount({
+        filterEl: 'mk-filters', pagerEl: 'mk-pager', tbodyId: 'mk-tbody', colspan: mkCanEdit() ? 2 : 1, pageSize: 10,
+        emptyText: 'Belum ada kendaraan',
+        filters: [{ id: 'q', type: 'search', placeholder: 'Cari nama kendaraan...', match: (k, v) => TableKit.norm(k.name).includes(TableKit.norm(v)) }],
+        renderRow: mkRowHtml
+    });
     document.getElementById('mk-tab-land').addEventListener('click', () => mkSetTab('land'));
     document.getElementById('mk-tab-sea').addEventListener('click', () => mkSetTab('sea'));
 
@@ -85,26 +96,24 @@ function mkSetTab(cat) {
     mkLoad();
 }
 
+function mkRowHtml(k) {
+    return `
+    <tr class="hover:bg-gray-50">
+        <td class="px-6 py-3 font-medium text-gray-900 text-left">${App.esc(k.name)}</td>
+        ${mkCanEdit() ? `<td class="px-6 py-3 text-right whitespace-nowrap">
+            <button onclick="mkRename(${Number(k.id)})" class="text-blue-600 hover:bg-blue-50 p-1.5 rounded transition"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
+            <button onclick="mkDelete(${Number(k.id)})" class="text-red-600 hover:bg-red-50 p-1.5 rounded transition ml-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+        </td>` : ''}
+    </tr>`;
+}
+
 async function mkLoad() {
-    const tbody = document.getElementById('mk-tbody');
-    const edit = mkCanEdit();
+    mkKit.loading();
     try {
         mkList = await App.api(`/master-kendaraan?category=${mkCategory}`);
-        if (!mkList.length) {
-            tbody.innerHTML = `<tr><td colspan="2" class="p-8 text-center text-gray-500">Belum ada kendaraan</td></tr>`;
-            return;
-        }
-        tbody.innerHTML = mkList.map(k => `
-            <tr class="hover:bg-gray-50">
-                <td class="px-6 py-3 font-medium text-gray-900 text-left">${App.esc(k.name)}</td>
-                ${edit ? `<td class="px-6 py-3 text-right whitespace-nowrap">
-                    <button onclick="mkRename(${Number(k.id)})" class="text-blue-600 hover:bg-blue-50 p-1.5 rounded transition"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
-                    <button onclick="mkDelete(${Number(k.id)})" class="text-red-600 hover:bg-red-50 p-1.5 rounded transition ml-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                </td>` : ''}
-            </tr>`).join('');
-        lucide.createIcons();
+        mkKit.setRows(mkList);
     } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="2" class="p-8 text-center text-red-500">Gagal memuat data</td></tr>`;
+        document.getElementById('mk-tbody').innerHTML = `<tr><td colspan="2" class="p-8 text-center text-red-500">Gagal memuat data</td></tr>`;
     }
 }
 
