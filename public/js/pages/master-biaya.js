@@ -130,6 +130,7 @@ function mbRenderHead() {
     document.getElementById('mb-thead').innerHTML = `
         <th class="px-4 py-3 font-medium">Origin</th>
         <th class="px-4 py-3 font-medium">Destination</th>
+        <th class="px-4 py-3 font-medium">Type Truck</th>
         <th class="px-4 py-3 font-medium text-right">Total Biaya</th>
         ${mbCanDetail() ? '<th class="px-4 py-3 font-medium text-center">Action</th>' : ''}`;
 }
@@ -140,10 +141,12 @@ function mbRenderRow(item) {
     const dest = [item.destination_provinsi, item.destination_kota, item.destination_kecamatan].filter(Boolean).join(', ');
     // Darat: kolom Total. Laut: nilai SUBMIT (dasar perhitungan di Calculate Cost).
     const total = type === 'land' ? item.total : item.submit_value;
+    const truck = type === 'land' ? item.type_mobil : item.truck_type;
     return `
     <tr class="hover:bg-gray-50">
         <td class="px-4 py-3">${App.esc(origin || '-')}</td>
         <td class="px-4 py-3">${App.esc(dest || '-')}</td>
+        <td class="px-4 py-3">${truck ? `<span class="inline-block px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-xs font-medium">${App.esc(truck)}</span>` : '<span class="text-gray-400">-</span>'}</td>
         <td class="px-4 py-3 font-medium text-right">${App.formatRp(total)}</td>
         ${mbCanDetail() ? `<td class="px-4 py-3 text-center">
             <button onclick="App.loadPage('master-detail-biaya', {id: '${Number(item.id)}', type: '${type}'})" class="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded border border-blue-200 text-xs font-medium transition">Detail</button>
@@ -155,7 +158,7 @@ function mbInitKit() {
     mbRenderHead();
     mbKit = TableKit.mount({
         filterEl: 'mb-filters', pagerEl: 'mb-pager', tbodyId: 'mb-tbody',
-        colspan: mbCanDetail() ? 4 : 3, pageSize: 25, sizes: [10, 25, 50, 100],
+        colspan: mbCanDetail() ? 5 : 4, pageSize: 25, sizes: [10, 25, 50, 100],
         emptyText: 'Tidak ada data Master Biaya',
         filters: [
             { id: 'search', type: 'search', placeholder: 'Cari origin / destination...' },
