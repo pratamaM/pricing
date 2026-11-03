@@ -12,10 +12,17 @@ const App = {
                 ...options
             });
             const data = await res.json();
+            if (res.status === 401 && !url.startsWith('/auth/') && this.user) {
+                // sesi habis: kembali ke login sekali saja (bukan error berulang)
+                this.user = null;
+                this.showToast('Sesi berakhir, silakan login kembali', 'warning');
+                this.showLogin();
+                throw new Error('Sesi berakhir');
+            }
             if (!res.ok) throw new Error(data.error || 'Request failed');
             return data;
         } catch (e) {
-            console.error('API Error:', e);
+            if (e.message !== 'Sesi berakhir') console.error('API Error:', e);
             throw e;
         }
     },
