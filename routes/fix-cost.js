@@ -17,6 +17,12 @@ function stageFor(role, status) {
     return s && (role === s.role || role === 'superadmin') ? s : null;
 }
 
+// Pesan jelas bila pengajuan sudah tidak bisa diproses oleh role ini (mis. sudah diputuskan, atau bukan gilirannya)
+const STATUS_LABEL = { pending: 'Menunggu Supervisor', approved_supervisor: 'Menunggu Atasan', approved_atasan: 'Approved', rejected_supervisor: 'Ditolak Supervisor', rejected_atasan: 'Ditolak Atasan' };
+function STATE_MSG(role, status) {
+    return `Pengajuan ini sudah berstatus "${STATUS_LABEL[status] || status}" sehingga tidak bisa diproses lagi oleh ${role}. Data akan dimuat ulang.`;
+}
+
 router.post('/create', (req, res) => {
     try {
         const { transport_type, origin_provinsi, origin_kota, origin_kecamatan, destination_provinsi, destination_kota, destination_kecamatan, original_cost, discount_percentage, discount_amount, fix_cost, notes,
@@ -173,7 +179,7 @@ router.post('/approve/:id', (req, res) => {
         const done = queryGet('SELECT COUNT(*) AS c FROM fix_cost_approvals WHERE fix_cost_request_id = ? AND approver_id = ?', [id, req.session.userId]);
         if (done && done.c > 0) return res.status(403).json({ error: 'Anda sudah memproses pengajuan ini' });
         const st = stageFor(role, request.status);
-        if (!st) return res.status(403).json({ error: 'Invalid state for approval' });
+        if (!st) return res.status(409).json({ error: STATE_MSG(role, request.status) });
         const newStatus = st.approved;
         
         queryRun('UPDATE fix_cost_requests SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [newStatus, id]);
@@ -198,7 +204,7 @@ router.post('/reject/:id', (req, res) => {
         const done = queryGet('SELECT COUNT(*) AS c FROM fix_cost_approvals WHERE fix_cost_request_id = ? AND approver_id = ?', [id, req.session.userId]);
         if (done && done.c > 0) return res.status(403).json({ error: 'Anda sudah memproses pengajuan ini' });
         const st = stageFor(role, request.status);
-        if (!st) return res.status(403).json({ error: 'Invalid state for rejection' });
+        if (!st) return res.status(409).json({ error: STATE_MSG(role, request.status) });
         const newStatus = st.rejected;
         
         queryRun('UPDATE fix_cost_requests SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [newStatus, id]);

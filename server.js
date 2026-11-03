@@ -32,7 +32,7 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 // Data API tidak boleh di-cache browser/proxy (supaya status approval selalu terbaru)
-app.use('/api', (req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
+app.use('/api', (req, res, next) => { res.set({ 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0', 'Pragma': 'no-cache', 'Expires': '0' }); next(); });
 app.use(session({
     store: new FileStore(path.join(__dirname, 'sessions')),
     secret: process.env.SESSION_SECRET || 'pricing-secret-key-2026', // di server produksi, set SESSION_SECRET
