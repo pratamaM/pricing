@@ -53,7 +53,7 @@ const SPEC = {
         n('maint_fee', 'MAINT. FEE', 'MANT. FEE', 'MAINT FEE', 'MANT FEE'), n('risk_claim_it', 'RISK CLAIM + IT', 'RISK CLAIM/IT', 'RISK CLAIM IT'),
         n('total_cost', 'TOTAL COST'),
         n('marketing', 'MARKETING'),
-        n('cost_pph', 'COST + PPH', 'TOTAL COST + PROFIT + PPH'),
+        n('cost_pph', 'COST + PPH', 'TOTAL COST + JASA + PPH', 'TOTAL COST + PROFIT + PPH'),
         n('total', 'SUBMIT', 'TOTAL'),
         n('jasa', 'JASA')],
     sea: [...LOC, svcSea, ...GUDANG,
@@ -144,7 +144,7 @@ function locateColumns(aoa, spec, anchors) {
 //   MASTER PORT OF LOAD         : THC origin + LOLO per port & type truck
 //   MASTER PORT OF DISC         : THC dest per port tujuan & type truck
 //   MASTER PTP                  : freight & FS(LSS) Temas / Meratus per port asal, port tujuan, type truck
-//   MASTER OTHERS               : DO+CLEAN, risk claim, marketing per type truck (opsional: PROFIT, MARGIN SUBMIT)
+//   MASTER OTHERS               : DO+CLEAN, risk claim, marketing per type truck (opsional: JASA, MARGIN SUBMIT)
 // Rumus (cocok dengan file hasil): Total = (semua biaya + profit + freight + LSS) / 0.98 (PPH 2%);
 // Submit = (Total Temas + margin) dibulatkan ke atas per 10.000. Profit bawaan 1.500.000, margin Submit bawaan 500.000.
 const PPH_DIVISOR = 0.98, DEFAULT_PROFIT = 1500000, DEFAULT_SUBMIT_MARGIN = 500000;
@@ -157,7 +157,7 @@ const SEA_MASTER_SHEETS = {
     ptp: { sheet: 'MASTER PTP', spec: [t('from', 'PORT ORIGIN'), t('to', 'PORT DESTINATION'), t('truck', 'TRUCK TYPE'),
         n('tF', 'TEMAS FREIGHT'), n('tL', 'TEMAS FS(LSS)', 'TEMAS LSS'), n('mF', 'MERATUS FREIGHT'), n('mL', 'MERATUS FS(LSS)', 'MERATUS LSS')] },
     others: { sheet: 'MASTER OTHERS', spec: [t('truck', 'TRUCK TYPE'), n('doClean', 'DO+CLEAN', 'DO + CLEAN'), n('risk', 'RISK CLAIM'), n('marketing', 'MARKETING'),
-        n('profit', 'PROFIT'), n('margin', 'MARGIN SUBMIT', 'SUBMIT MARGIN')] }
+        n('profit', 'JASA', 'PROFIT'), n('margin', 'MARGIN SUBMIT', 'SUBMIT MARGIN')] }
 };
 
 const isSeaMasterWorkbook = (wb) => {
