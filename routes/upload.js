@@ -3,10 +3,11 @@ const multer = require('multer');
 const xlsx = require('xlsx');
 const path = require('path');
 const fs = require('fs');
-const { queryRun, queryGet, saveDb, getDb } = require('../database/init');
+const { queryRun, queryGet, queryAll, saveDb, getDb } = require('../database/init');
 const { requireRole } = require('../middleware/auth');
 const { normalizeVehicle } = require('../utils/vehicle');
 const { provinceFor } = require('../utils/wilayah');
+const batch = require('../utils/master-batch');
 
 const router = express.Router();
 
@@ -16,6 +17,7 @@ if (!fs.existsSync(uploadDir)) {
 }
 
 const upload = multer({ dest: uploadDir });
+const batchDir = path.join(uploadDir, 'master-batches');
 
 // Upload master biaya: superadmin, admin (setting), supervisor, atasan
 router.use(requireRole('superadmin', 'admin')); // upload Excel hanya admin & superadmin
@@ -400,25 +402,28 @@ function handleUpload(type) {
             }
 
             // Satu transaksi: kalau ada yang gagal, tidak ada baris setengah masuk.
-            // ?replace=1 -> hapus semua data lama (tipe ini) dulu, dalam transaksi yang sama dengan impor
-            const replace = req.query.replace === '1';
-            let deleted = 0;
+            // Data lama TIDAK dihapus: dipindah ke arsip dan versinya ditandai expired (bisa diunduh / diaktifkan lagi).
+            let deleted = 0, batchId = null;
             const db = getDb();
             db.run('BEGIN');
             try {
-                if (replace) {
-                    deleted = queryGet(`SELECT COUNT(*) AS c FROM master_biaya_${type}`).c;
-                    queryRun(`DELETE FROM master_biaya_${type}`, [], false);
-                }
+                deleted = batch.expireActive(db, type).expired;
+                batchId = batch.createBatch(db, type, req.file.originalname, req.session.userId, toInsert.length);
                 for (const p of toInsert) queryRun(sql, p, false);
                 db.run('COMMIT');
             } catch (e) {
                 db.run('ROLLBACK');
                 throw e;
             }
+            try {   // simpan file asli supaya versi ini bisa diunduh lagi
+                fs.mkdirSync(batchDir, { recursive: true });
+                const dest = path.join(batchDir, `batch_${batchId}${path.extname(req.file.originalname).toLowerCase() === '.xls' ? '.xls' : '.xlsx'}`);
+                fs.copyFileSync(filePath, dest);
+                queryRun('UPDATE master_upload_batches SET file_path = ? WHERE id = ?', [dest, batchId], false);
+            } catch (e) { console.error('Gagal menyimpan file versi:', e.message); }
             saveDb();
 
-            res.json({ message: 'Success', format, deleted, rowsInserted: toInsert.length, sheets, skippedSheets, warnings });
+            res.json({ message: 'Success', format, deleted, expired: deleted, batchId, rowsInserted: toInsert.length, sheets, skippedSheets, warnings });
         } catch (err) {
             res.status(500).json({ error: (err && err.message) ? err.message : String(err) });
         } finally {
@@ -434,6 +439,50 @@ router.get('/template/sea', (req, res) => {
 
 router.get('/template/land', (req, res) => {
     res.download(path.join(__dirname, '..', 'templates', 'master_darat_untuk_upload.xlsx'), 'master_darat_untuk_upload.xlsx');
+});
+
+// ---- Riwayat versi upload ----
+router.get('/batches', (req, res) => {
+    const type = req.query.type === 'sea' ? 'sea' : 'land';
+    const rows = queryAll(`SELECT b.id, b.type, b.filename, b.row_count, b.status, b.uploaded_at, b.expired_at, b.activated_at, b.note,
+        b.file_path IS NOT NULL AS has_file, u.name AS uploaded_by_name FROM master_upload_batches b LEFT JOIN users u ON u.id = b.uploaded_by
+        WHERE b.type = ? ORDER BY b.id DESC`, [type]);
+    const act = rows.find(r => r.status === 'active');
+    if (act) act.row_count = queryGet(`SELECT COUNT(*) AS c FROM master_biaya_${type}`).c;
+    res.json(rows);
+});
+
+router.post('/batches/:id/activate', (req, res) => {
+    const db = getDb();
+    db.run('BEGIN');
+    try {
+        const r = batch.activate(db, Number(req.params.id));
+        if (r.error) { db.run('ROLLBACK'); return res.status(r.code).json({ error: r.error }); }
+        db.run('COMMIT'); saveDb();
+        res.json({ message: 'Versi diaktifkan', ...r });
+    } catch (e) {
+        try { db.run('ROLLBACK'); } catch (_) { /* sudah selesai */ }
+        res.status(500).json({ error: (e && e.message) || String(e) });
+    }
+});
+
+router.get('/batches/:id/download', (req, res) => {
+    const b = queryGet('SELECT * FROM master_upload_batches WHERE id = ?', [Number(req.params.id)]);
+    if (!b) return res.status(404).json({ error: 'Versi tidak ditemukan' });
+    const stamp = String(b.uploaded_at || '').slice(0, 10);
+    if (b.file_path && fs.existsSync(b.file_path)) {
+        const ext = path.extname(b.file_path) || '.xlsx';
+        const base = path.basename(String(b.filename || 'upload'), path.extname(String(b.filename || '')));
+        return res.download(b.file_path, `master_${b.type}_${stamp}_${base}${ext}`);
+    }
+    // Tidak ada file asli (data awal / file hilang): ekspor isi datanya sebagai Excel
+    const table = b.status === 'active' ? `master_biaya_${b.type}` : `master_biaya_${b.type}_arch`;
+    const rows = b.status === 'active' ? queryAll(`SELECT * FROM ${table}`) : queryAll(`SELECT * FROM ${table} WHERE batch_id = ?`, [b.id]);
+    const wb = xlsx.utils.book_new();
+    xlsx.utils.book_append_sheet(wb, xlsx.utils.json_to_sheet(rows.map(({ batch_id, ...r }) => r)), 'DATA');
+    const buf = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    res.set({ 'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'Content-Disposition': `attachment; filename="master_${b.type}_versi${b.id}_${stamp}.xlsx"` });
+    res.send(buf);
 });
 
 router.post('/land', upload.single('file'), handleUpload('land'));

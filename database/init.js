@@ -225,6 +225,8 @@ async function initDb() {
         if (fixed) console.log(`Migrasi database: ${fixed} provinsi Master Biaya diperbaiki sesuai kota.`);
     }
 
+    require('../utils/master-batch').ensureTables(db);
+
     const res = db.exec('SELECT COUNT(*) as count FROM users');
     let count = 0;
     if (res.length > 0 && res[0].values.length > 0) {

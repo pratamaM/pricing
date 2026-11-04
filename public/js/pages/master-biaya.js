@@ -18,6 +18,10 @@ function renderMasterBiaya() {
                     <i data-lucide="download" class="w-4 h-4"></i>
                     <span id="btn-template-label" class="hidden sm:inline">Template</span>
                 </a>
+                <button id="btn-history" class="flex items-center gap-2 border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap" title="Versi upload sebelumnya">
+                    <i data-lucide="history" class="w-4 h-4"></i>
+                    <span class="hidden sm:inline">Riwayat Upload</span>
+                </button>
                 <button id="btn-upload" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap">
                     <i data-lucide="upload" class="w-4 h-4"></i>
                     <span class="hidden sm:inline">Upload Excel</span>
@@ -66,11 +70,11 @@ async function renderMasterBiayaInit() {
             const formData = new FormData();
             formData.append('file', file);
 
-            // Upload mengganti seluruh data lama (tipe yang sedang dibuka) dengan isi file
+            // Upload menjadikan isi file sebagai versi aktif; data lama di-expired (tidak dihapus)
             let oldCount = 0;
             try { oldCount = (await App.api('/master-biaya/count'))[currentMasterBiayaType] || 0; } catch (e) { /* hanya untuk teks konfirmasi */ }
             const label = currentMasterBiayaType === 'sea' ? 'Sea' : 'Darat';
-            if (!confirm(`Upload akan MENGHAPUS ${oldCount} baris data Master Biaya ${label} yang lama lalu menggantinya dengan isi file ini.\n\nLanjutkan?`)) {
+            if (!confirm(`Data Master Biaya ${label} yang aktif (${oldCount} baris) akan di-EXPIRED dan diganti dengan isi file ini.\n\nData lama tidak dihapus: bisa diunduh atau diaktifkan lagi lewat tombol Riwayat Upload.\n\nLanjutkan?`)) {
                 fileUpload.value = '';
                 return;
             }
@@ -80,7 +84,7 @@ async function renderMasterBiayaInit() {
                 btnUpload.innerHTML = '<div class="spinner w-4 h-4 border-2"></div>';
                 
                 const up = await App.apiUpload(`/upload/${currentMasterBiayaType}?replace=1`, formData);
-                App.showToast(`Upload berhasil: ${up.rowsInserted} baris diimpor${up.deleted ? `, ${up.deleted} baris lama dihapus` : ''}`, 'success');
+                App.showToast(`Upload berhasil: ${up.rowsInserted} baris diimpor${up.expired ? `, ${up.expired} baris lama di-expired` : ''}`, 'success');
                 if (up.warnings && up.warnings.length) App.showToast(`${up.warnings.length} baris master dilewati: ${up.warnings.slice(0, 3).join(' | ')}${up.warnings.length > 3 ? ' ...' : ''}`, 'warning');
                 loadMasterBiayaData(true);
             } catch (err) {
@@ -94,8 +98,77 @@ async function renderMasterBiayaInit() {
         });
     }
 
+    const btnHistory = document.getElementById('btn-history');
+    if (btnHistory) btnHistory.addEventListener('click', mbOpenHistory);
+
     mbToggleTemplateLink();
     mbInitKit();
+}
+
+// ---- Riwayat versi upload: unduh / aktifkan kembali ----
+function mbFmtDate(v) {
+    if (!v) return '-';
+    const d = new Date(String(v).replace(' ', 'T') + 'Z');
+    return isNaN(d) ? v : d.toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' });
+}
+
+async function mbOpenHistory() {
+    const type = currentMasterBiayaType;
+    const label = type === 'sea' ? 'Sea' : 'Darat';
+    let box = document.getElementById('mb-history-modal');
+    if (box) box.remove();
+    box = document.createElement('div');
+    box.id = 'mb-history-modal';
+    box.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4';
+    box.innerHTML = `
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col">
+            <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+                <div><h3 class="font-semibold text-gray-800">Riwayat Upload Master Biaya ${label}</h3>
+                <p class="text-xs text-gray-500 mt-0.5">Hanya satu versi yang aktif. Versi lama tidak dihapus: unduh atau aktifkan kembali.</p></div>
+                <button type="button" data-close class="text-gray-400 hover:text-gray-600 text-xl leading-none px-2">&times;</button>
+            </div>
+            <div class="overflow-auto" id="mb-history-body"><div class="p-10 text-center"><div class="spinner mx-auto"></div></div></div>
+        </div>`;
+    document.body.appendChild(box);
+    const close = () => box.remove();
+    box.addEventListener('click', (e) => { if (e.target === box || e.target.closest('[data-close]')) close(); });
+
+    const body = box.querySelector('#mb-history-body');
+    async function render() {
+        try {
+            const list = await App.api(`/upload/batches?type=${type}`);
+            if (!list.length) { body.innerHTML = '<div class="p-10 text-center text-gray-500">Belum ada riwayat upload.</div>'; return; }
+            body.innerHTML = `<table class="w-full text-sm"><thead class="bg-gray-50 text-xs text-gray-500 uppercase"><tr>
+                <th class="px-4 py-2 text-left">Versi</th><th class="px-4 py-2 text-left">File</th><th class="px-4 py-2 text-left">Diupload</th>
+                <th class="px-4 py-2 text-right">Baris</th><th class="px-4 py-2 text-left">Status</th><th class="px-4 py-2 text-right">Aksi</th></tr></thead><tbody>
+                ${list.map(b => `<tr class="border-t border-gray-100">
+                    <td class="px-4 py-3 font-medium text-gray-700">#${b.id}</td>
+                    <td class="px-4 py-3 text-gray-700">${App.esc(b.filename || '-')}</td>
+                    <td class="px-4 py-3 text-gray-500">${App.esc(mbFmtDate(b.uploaded_at))}<div class="text-xs text-gray-400">${App.esc(b.uploaded_by_name || '')}</div></td>
+                    <td class="px-4 py-3 text-right">${b.row_count}</td>
+                    <td class="px-4 py-3">${b.status === 'active'
+                        ? '<span class="px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700 font-medium">Aktif</span>'
+                        : `<span class="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600 font-medium">Expired</span><div class="text-xs text-gray-400 mt-0.5">${App.esc(mbFmtDate(b.expired_at))}</div>`}</td>
+                    <td class="px-4 py-3 text-right whitespace-nowrap">
+                        <a href="api/upload/batches/${b.id}/download" download class="inline-flex items-center gap-1 px-3 py-1.5 text-xs border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Download</a>
+                        ${b.status === 'active' ? '' : `<button type="button" data-activate="${b.id}" class="ml-1 px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg">Aktifkan</button>`}
+                    </td></tr>`).join('')}
+                </tbody></table>`;
+        } catch (e) { body.innerHTML = `<div class="p-10 text-center text-red-500">${App.esc(e.message)}</div>`; }
+    }
+    body.addEventListener('click', async (e) => {
+        const btn = e.target.closest('[data-activate]');
+        if (!btn) return;
+        if (!confirm(`Aktifkan versi #${btn.dataset.activate}?\n\nData Master Biaya ${label} yang aktif sekarang akan di-expired dan diganti dengan versi ini. Harga pengajuan baru memakai versi ini; pengajuan lama tidak berubah.`)) return;
+        btn.disabled = true; btn.textContent = 'Memproses...';
+        try {
+            const r = await App.api(`/upload/batches/${btn.dataset.activate}/activate`, { method: 'POST' });
+            App.showToast(`Versi #${btn.dataset.activate} aktif (${r.restored} baris)`, 'success');
+            loadMasterBiayaData(true);
+        } catch (err) { App.showToast(err.message, 'error'); }
+        render();
+    });
+    render();
 }
 
 // Tombol template mengikuti tab aktif (Darat / Sea)
